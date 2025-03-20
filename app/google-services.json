@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1046158098919",
+    "project_id": "e-clinic-23fda",
+    "storage_bucket": "e-clinic-23fda.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1046158098919:android:c4bb97217fd1d13d747d42",
+        "android_client_info": {
+          "package_name": "com.example.e_clinic"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDF7JGRouFlL6PDuWiHKWWwflzKQEuAhw4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
