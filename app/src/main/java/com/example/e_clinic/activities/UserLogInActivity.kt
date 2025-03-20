@@ -1,4 +1,4 @@
-package com.example.e_clinic
+package com.example.e_clinic.activities
 
 import android.content.Intent
 import android.os.Bundle
@@ -53,17 +53,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.e_clinic.ui.theme.EclinicTheme
+import com.example.e_clinic.ui.theme.EClinicTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
 
-class MainActivity : ComponentActivity() {
+class UserLogInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            EclinicTheme {
+            EClinicTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Greeting(
                         name = "Android",
@@ -72,11 +72,11 @@ class MainActivity : ComponentActivity() {
                 }
                 LogInScreen(
                     onSignUpClick = {
-                        val intent = Intent(this, MainActivity::class.java)
+                        val intent = Intent(this, DoctorLogInActivity::class.java)
                         startActivity(intent)
                     },
                     onSignInSuccess = {
-                        val intent = Intent(this, MainActivity::class.java)
+                        val intent = Intent(this, UserActivity::class.java)
                         startActivity(intent)
                     }
                 )
@@ -97,7 +97,7 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-    EclinicTheme {
+    EClinicTheme {
         Greeting("Android")
     }
 }
@@ -236,10 +236,10 @@ fun LogInScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-/*
+
         Button(
             onClick = {
-                val intent = Intent(context, AdminLogInActivity::class.java)
+                val intent = Intent(context, DoctorLogInActivity::class.java)
                 context.startActivity(intent)
             },
             colors = ButtonDefaults.buttonColors(
@@ -251,7 +251,7 @@ fun LogInScreen(
         ) {
             Text("I am admin", fontSize = 16.sp, fontWeight = FontWeight.Medium)
         }
-*/
+
 
         LaunchedEffect(errorMessage, successMessage) {
             if (errorMessage != null || successMessage != null) {
