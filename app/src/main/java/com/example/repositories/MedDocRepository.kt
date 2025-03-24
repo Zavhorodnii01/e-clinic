@@ -1,4 +1,4 @@
-package com.example.Repositories
+package com.example.repositories
 
 import android.net.Uri
 import com.example.collections.MedDoc

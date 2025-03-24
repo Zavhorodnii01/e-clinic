@@ -72,7 +72,7 @@ class UserLogInActivity : ComponentActivity() {
                 }
                 LogInScreen(
                     onSignUpClick = {
-                        val intent = Intent(this, DoctorLogInActivity::class.java)
+                        val intent = Intent(this, UserSignUpActivity::class.java)
                         startActivity(intent)
                     },
                     onSignInSuccess = {

@@ -9,7 +9,6 @@ data class User(
     val dob: String = "",
     val email: String = "",
     val gender: String = "",
-    val medical_history_id: String = "",
     val name: String = "",
     val phone: String = "",
     val surname: String = ""

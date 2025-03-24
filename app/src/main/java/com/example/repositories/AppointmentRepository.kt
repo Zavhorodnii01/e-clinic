@@ -1,4 +1,4 @@
-package com.example.Repositories
+package com.example.repositories
 
 import com.example.collections.Appointment
 import com.google.firebase.firestore.FirebaseFirestore
