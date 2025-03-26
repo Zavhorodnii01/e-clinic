@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <application
-        android:name=".activities.MyApplication"
+        android:name="com.example.e_clinic.ui.activities.MyApplication"
 
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -15,25 +15,25 @@
         android:theme="@style/Theme.Eclinic"
         tools:targetApi="31">
         <activity
-            android:name=".activities.UserSignUpActivity"
+            android:name="com.example.e_clinic.ui.activities.user_screens.UserSignUpActivity"
             android:exported="true" />
         <activity
-            android:name=".activities.AdminActivity"
+            android:name="com.example.e_clinic.ui.activities.admin_screens.AdminActivity"
             android:exported="true" />
         <activity
-            android:name=".activities.DoctorActivity"
+            android:name="com.example.e_clinic.ui.activities.doctor_screens.DoctorActivity"
             android:exported="true" />
         <activity
-            android:name=".activities.AdminLogInActivity"
+            android:name="com.example.e_clinic.ui.activities.admin_screens.AdminLogInActivity"
             android:exported="true" />
         <activity
-            android:name=".activities.UserActivity"
+            android:name="com.example.e_clinic.ui.activities.user_screens.UserActivity"
             android:exported="true" />
         <activity
-            android:name=".activities.DoctorLogInActivity"
+            android:name="com.example.e_clinic.ui.activities.doctor_screens.DoctorLogInActivity"
             android:exported="true" />
         <activity
-            android:name=".activities.UserLogInActivity"
+            android:name="com.example.e_clinic.ui.activities.user_screens.UserLogInActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Eclinic">

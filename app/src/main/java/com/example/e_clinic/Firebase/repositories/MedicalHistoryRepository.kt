@@ -1,6 +1,6 @@
-package com.example.repositories
+package com.example.e_clinic.Firebase.repositories
 
-import com.example.collections.MedicalHistory
+import com.example.e_clinic.Firebase.collections.MedicalHistory
 import com.google.firebase.firestore.FirebaseFirestore
 
 class MedicalHistoryRepository {

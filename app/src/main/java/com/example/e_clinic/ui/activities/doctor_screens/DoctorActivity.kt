@@ -1,4 +1,4 @@
-package com.example.e_clinic.activities
+package com.example.e_clinic.ui.activities.doctor_screens
 
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge

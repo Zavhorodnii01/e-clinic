@@ -1,7 +1,7 @@
-package com.example.repositories
+package com.example.e_clinic.Firebase.repositories
 
 import android.net.Uri
-import com.example.collections.MedDoc
+import com.example.e_clinic.Firebase.collections.MedDoc
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 //MedDocRepository connects Firestore to Firebase Storage.

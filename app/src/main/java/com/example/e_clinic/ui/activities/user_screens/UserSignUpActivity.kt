@@ -1,4 +1,4 @@
-package com.example.e_clinic.activities
+package com.example.e_clinic.ui.activities.user_screens
 
 import android.app.DatePickerDialog
 import android.content.Intent

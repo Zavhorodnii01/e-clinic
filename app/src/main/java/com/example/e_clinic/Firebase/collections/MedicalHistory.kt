@@ -1,4 +1,4 @@
-package com.example.collections
+package com.example.e_clinic.Firebase.collections
 
 import com.google.firebase.firestore.DocumentId
 

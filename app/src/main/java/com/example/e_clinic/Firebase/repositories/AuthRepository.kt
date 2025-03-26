@@ -1,4 +1,4 @@
-package com.example.repositories
+package com.example.e_clinic.Firebase.repositories
 
 import com.google.firebase.auth.FirebaseAuth
 
