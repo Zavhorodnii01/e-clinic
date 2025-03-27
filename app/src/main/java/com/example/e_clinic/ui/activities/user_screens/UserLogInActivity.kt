@@ -1,10 +1,16 @@
 package com.example.e_clinic.ui.activities.user_screens
 
+import android.app.Activity
+import android.app.PendingIntent
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -44,19 +50,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color // Correct Color import
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.e_clinic.R
+//import com.example.e_clinic.R
 import com.example.e_clinic.ui.activities.doctor_screens.DoctorLogInActivity
 import com.example.e_clinic.ui.theme.EClinicTheme
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
+
+
 
 class UserLogInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -110,11 +124,27 @@ fun LogInScreen(
     onSignInSuccess: () -> Unit
 ) {
     val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val credential = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            val account = credential.result
+            val authCredential = GoogleAuthProvider.getCredential(account.idToken, null)
+
+            FirebaseAuth.getInstance().signInWithCredential(authCredential)
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        onSignInSuccess()
+                    } else {
+                        Toast.makeText(context, "Google Sign-In Failed", Toast.LENGTH_SHORT).show()
+                    }
+                }
+        }
+    }
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
-    var logInStatus by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -124,7 +154,7 @@ fun LogInScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Welcome to e clinic",
+            text = "Welcome to eClinic",
             fontSize = MaterialTheme.typography.headlineSmall.fontSize,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(12.dp)
@@ -155,41 +185,15 @@ fun LogInScreen(
 
         Button(
             onClick = {
-                    FirebaseAuth.getInstance().signInWithEmailAndPassword(email, password)
-                        .addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                val userId = FirebaseAuth.getInstance().currentUser?.uid
-                                if (userId != null) {
-                                    FirebaseFirestore.getInstance().collection("users")
-                                        .document(userId)
-                                        .get()
-                                        .addOnSuccessListener { document ->
-                                            val isAdmin = document.getBoolean("admin") ?: false
-                                            if (!isAdmin) {
-                                                logInStatus = ""
-                                                onSignInSuccess()
-                                            } else {
-                                                FirebaseAuth.getInstance().signOut()
-                                                errorMessage = "You are not authorized as a user."
-                                            }
-                                        }
-                                        .addOnFailureListener { exception ->
-                                            errorMessage = "Error fetching user data: ${exception.message}"
-                                        }
-                                } else {
-                                    errorMessage = "User not found."
-                                }
-                            } else {
-                                // errorMessage = task.exception?.message ?: "Authentication failed"
-                                errorMessage = "Incorrect password or email"
-                            }
+                FirebaseAuth.getInstance().signInWithEmailAndPassword(email, password)
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            onSignInSuccess()
+                        } else {
+                            errorMessage = "Incorrect email or password"
                         }
-
+                    }
             },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFFFD700),
-                contentColor = Color.Black
-            ),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp)
         ) {
@@ -199,10 +203,7 @@ fun LogInScreen(
         OutlinedButton(
             onClick = onSignUpClick,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Color(0xFFE0B400)
-            )
+            shape = RoundedCornerShape(8.dp)
         ) {
             Text("Sign Up")
         }
@@ -217,49 +218,51 @@ fun LogInScreen(
                             if (task.isSuccessful) {
                                 successMessage = "Password reset email sent to $email"
                             } else {
-                                errorMessage = task.exception?.message
+                                errorMessage = "Failed to send reset email"
                             }
                         }
                 } else {
-                    errorMessage = "Please enter your email address to reset your password"
+                    errorMessage = "Enter your email to reset password"
                 }
             },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFE0B400),
-                contentColor = Color.White
-            ),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp)
         ) {
             Text("Forgot Password", fontSize = 16.sp, fontWeight = FontWeight.Medium)
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-
+        // **Google Sign-In Button**
         Button(
             onClick = {
-                val intent = Intent(context, DoctorLogInActivity::class.java)
-                context.startActivity(intent)
+                val googleSignInClient = GoogleSignIn.getClient(
+                    context,
+                    GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                        .requestIdToken(context.getString(R.string.default_web_client_id))
+                        .requestEmail()
+                        .build()
+                )
+
+                val signInIntent = googleSignInClient.signInIntent
+                val pendingIntent = PendingIntent.getActivity(context, 0, signInIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
+                launcher.launch(IntentSenderRequest.Builder(pendingIntent.intentSender).build())
             },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFE0B400),
-                contentColor = Color.White
-            ),
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp)
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4285F4))
         ) {
-            Text("I am admin", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Icon(
+                painter = painterResource(id = R.drawable.ic_android_black_24dp),
+                contentDescription = "Google Icon",
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Sign in with Google", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color.White)
         }
 
-
-        LaunchedEffect(errorMessage, successMessage) {
-            if (errorMessage != null || successMessage != null) {
-                delay(7000) // Keep message visible for 7 seconds
-                errorMessage = null
-                successMessage = null
-            }
-        }
+        Spacer(modifier = Modifier.height(16.dp))
 
         AnimatedVisibility(
             visible = errorMessage != null || successMessage != null,
@@ -272,8 +275,7 @@ fun LogInScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (errorMessage != null) Color(0xFFFFE0E0) else Color(0xFFE0FFE0),
-                    contentColor = Color.Black
+                    containerColor = if (errorMessage != null) Color(0xFFFFE0E0) else Color(0xFFE0FFE0)
                 )
             ) {
                 Row(
@@ -290,22 +292,10 @@ fun LogInScreen(
                     Text(
                         text = errorMessage ?: successMessage ?: "",
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Start,
-                        modifier = Modifier.weight(1f) // Allow text to expand dynamically
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
         }
     }
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    // Text(
-    //     text = logInStatus,
-    //     modifier = Modifier.fillMaxWidth(),
-    //     color = Color(0xFF0073CE),
-    //     fontSize = 16.sp,
-    //     textAlign = TextAlign.Center
-    // )
 }

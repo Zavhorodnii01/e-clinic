@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">e-clinic</string>
+    <string name="default_web_client_id">1046158098919-6t28r4fccb845poid5l6s12d1ph2eje6.apps.googleusercontent.com</string>
+
 </resources>
