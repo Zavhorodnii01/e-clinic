@@ -133,7 +133,7 @@ fun LogInScreen(
             FirebaseAuth.getInstance().signInWithCredential(authCredential)
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        onSignInSuccess()
+                        onSignInSuccess()  // Trigger successful sign-in action
                     } else {
                         Toast.makeText(context, "Google Sign-In Failed", Toast.LENGTH_SHORT).show()
                     }
@@ -160,6 +160,7 @@ fun LogInScreen(
             modifier = Modifier.padding(12.dp)
         )
 
+        // Email and Password fields
         TextField(
             value = email,
             onValueChange = { email = it },
@@ -188,7 +189,7 @@ fun LogInScreen(
                 FirebaseAuth.getInstance().signInWithEmailAndPassword(email, password)
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
-                            onSignInSuccess()
+                            onSignInSuccess()  // Trigger successful sign-in action
                         } else {
                             errorMessage = "Incorrect email or password"
                         }
@@ -233,7 +234,7 @@ fun LogInScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // **Google Sign-In Button**
+        // Google Sign-In Button
         Button(
             onClick = {
                 val googleSignInClient = GoogleSignIn.getClient(
@@ -262,8 +263,7 @@ fun LogInScreen(
             Text("Sign in with Google", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color.White)
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
+        // Display error or success messages
         AnimatedVisibility(
             visible = errorMessage != null || successMessage != null,
             enter = fadeIn(animationSpec = tween(500)) + slideInVertically(initialOffsetY = { it / 2 }),
