@@ -37,6 +37,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -232,11 +233,11 @@ fun LogInScreen(
             Text("Forgot Password", fontSize = 16.sp, fontWeight = FontWeight.Medium)
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
-        // Google Sign-In Button
-        Button(
+        IconButton(
             onClick = {
+                // Sign out first to force the account selection prompt
                 val googleSignInClient = GoogleSignIn.getClient(
                     context,
                     GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -245,23 +246,28 @@ fun LogInScreen(
                         .build()
                 )
 
+                GoogleSignIn.getLastSignedInAccount(context)?.let {
+                    googleSignInClient.signOut()  // Explicit sign-out before sign-in prompt
+                }
+
                 val signInIntent = googleSignInClient.signInIntent
-                val pendingIntent = PendingIntent.getActivity(context, 0, signInIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
+                val pendingIntent = PendingIntent.getActivity(
+                    context, 0, signInIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+                )
                 launcher.launch(IntentSenderRequest.Builder(pendingIntent.intentSender).build())
             },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4285F4))
+            modifier = Modifier.size(200.dp) // Adjust size to fit your icon
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.ic_android_black_24dp),
-                contentDescription = "Google Icon",
-                tint = Color.White,
-                modifier = Modifier.size(24.dp)
+                painter = painterResource(id = R.drawable.google_sign_in), // Your icon with text
+                contentDescription = "Google Sign-In",
+                tint = Color.Unspecified, // Keeps original icon colors
+                modifier = Modifier.fillMaxSize() // Makes the icon fill the button
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Sign in with Google", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color.White)
         }
+
+
 
         // Display error or success messages
         AnimatedVisibility(
