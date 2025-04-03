@@ -3,8 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <application
-        android:name="com.example.e_clinic.ui.activities.MyApplication"
-
+        android:name=".ui.activities.MyApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -15,25 +14,28 @@
         android:theme="@style/Theme.Eclinic"
         tools:targetApi="31">
         <activity
-            android:name="com.example.e_clinic.ui.activities.user_screens.UserSignUpActivity"
+            android:name=".ui.activities.logIn_screen.LogInActivity"
             android:exported="true" />
         <activity
-            android:name="com.example.e_clinic.ui.activities.admin_screens.AdminActivity"
+            android:name=".ui.activities.user_screens.UserSignUpActivity"
             android:exported="true" />
         <activity
-            android:name="com.example.e_clinic.ui.activities.doctor_screens.DoctorActivity"
+            android:name=".ui.activities.admin_screens.AdminActivity"
             android:exported="true" />
         <activity
-            android:name="com.example.e_clinic.ui.activities.admin_screens.AdminLogInActivity"
+            android:name=".ui.activities.doctor_screens.DoctorActivity"
             android:exported="true" />
         <activity
-            android:name="com.example.e_clinic.ui.activities.user_screens.UserActivity"
+            android:name=".ui.activities.admin_screens.AdminLogInActivity"
             android:exported="true" />
         <activity
-            android:name="com.example.e_clinic.ui.activities.doctor_screens.DoctorLogInActivity"
+            android:name=".ui.activities.user_screens.UserActivity"
             android:exported="true" />
         <activity
-            android:name="com.example.e_clinic.ui.activities.user_screens.UserLogInActivity"
+            android:name=".ui.activities.doctor_screens.DoctorLogInActivity"
+            android:exported="true" />
+        <activity
+            android:name=".ui.activities.user_screens.UserLogInActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Eclinic">
