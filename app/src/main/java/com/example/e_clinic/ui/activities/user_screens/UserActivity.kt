@@ -2,13 +2,16 @@ package com.example.e_clinic.ui.activities.user_screens
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import com.example.e_clinic.services.Service
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,10 +21,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
@@ -37,10 +42,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,6 +67,7 @@ import androidx.navigation.compose.composable
 import com.example.e_clinic.ui.theme.EClinicTheme
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.e_clinic.services.functions.appServices
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.CoroutineScope
 
@@ -121,9 +129,11 @@ fun MainScreen() {
         }
     ) {innerPadding ->
         NavigationHost(navController = navController, modifier = Modifier.padding(innerPadding))
-
-
     }
+    if (showSettings) {
+        SettingsScreen(onClose = { showSettings = false })
+    }
+
 }
 
 @Composable
@@ -133,72 +143,185 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier) {
         composable("home") { HomeScreen() }
         composable("services") { ServicesScreen(coroutineScope = coroutineScope)}
         composable("documents") { DocumentsScreen() }
-        composable("settings") { SettingsScreen() }
+        composable("settings") { SettingsScreen(onClose = {}) }
+        // TODO: Handling the services lists
     }
 }
 
 @Composable
-fun SettingsScreen() {
-    TODO("Not yet implemented")
+fun SettingsScreen(onClose: () -> Unit) {
+    var visibility by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        visibility = true
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(),
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 8.dp,
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    IconButton(onClick = { onClose() }) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close"
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Text(
+                            text = "Settings",
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
 fun ServicesScreen(coroutineScope: CoroutineScope) {
-    TODO("Not yet implemented")
+    //TODO: Actual Settings Screen UI
+    val scrollState = rememberScrollState()
+    val services = appServices()
+
+    Column {
+        Column {
+            Text(
+                text = "Your Services",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(16.dp)
+            )
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(services) { service ->
+                    ServiceListItem(service = service, onClick = {
+                        // Handle service click
+                    })
+                }
+            }
+        }
+    }
+}
+@Composable
+fun ServiceListItem(
+    service: Service,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = service.displayedName,
+                style = MaterialTheme.typography.titleMedium
+            )
+            if (service.description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = service.description,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+    }
 }
 
 
 @Composable
 fun DocumentsScreen() {
-    TODO("Not yet implemented")
+    //TODO: Implement Documents Screen UI with Firebase operations
+    val scrollState = rememberScrollState()
+
+    Column {
+        Text(
+            text = "Your Documents",
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(16.dp)
+        )
+    }
+
 }
 
 @Composable
 fun HomeScreen() {
     //TODO: Actual Home Screen UI
     val scrollState = rememberScrollState()
+
+    val services = appServices()
     Column {
 
-        UpcomingAppointmentsSection()
-
-        Spacer(modifier = Modifier.height(24.dp))
-        Divider()
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Services Section
-        ServicesSection()
-
-        Spacer(modifier = Modifier.height(24.dp))
-        Divider()
-        Spacer(modifier = Modifier.height(24.dp))
-    }
-}
+        Column {
+            Text(
+                text = "Upcoming Appointments",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(16.dp)
+            )
 
 
+            //TODO: Fetch appointments from Firebase as LazyList
+            val appointments = listOf(
+                "List item" to "Supporting line text lorem ipsum dolor sit amet, consectetur.",
+                "List item" to "Supporting line text lorem ipsum dolor sit amet, consectetur.",
+                "List item" to "Supporting line text lorem ipsum dolor sit amet, consectetur."
+            )
 
-@Composable
-fun UpcomingAppointmentsSection() {
-    Column {
-        Text(
-            text = "Upcoming Appointments",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        val appointments = listOf(
-            "List item" to "Supporting line text lorem ipsum dolor sit amet, consectetur.",
-            "List item" to "Supporting line text lorem ipsum dolor sit amet, consectetur.",
-            "List item" to "Supporting line text lorem ipsum dolor sit amet, consectetur."
-        )
-
-        LazyColumn {
-            items(appointments) { (title, description) ->
-                AppointmentItem(title = title, description = description)
-                Spacer(modifier = Modifier.height(12.dp))
+            LazyColumn {
+                items(appointments) { (title, description) ->
+                    AppointmentItem(title = title, description = description)
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
             }
         }
+
+
+        Spacer(modifier = Modifier.height(24.dp))
+        Divider()
+        Spacer(modifier = Modifier.height(24.dp))
+
+        ServicesSection(
+            services = services,
+            onServiceClick = { service ->
+                // Handle service click
+            }
+        )
+
+
     }
 }
+
+
+
 @Composable
 fun AppointmentItem(title: String, description: String) {
     var checked by remember { mutableStateOf(false) }
@@ -224,7 +347,10 @@ fun AppointmentItem(title: String, description: String) {
 
 
 @Composable
-fun ServicesSection() {
+fun ServicesSection(
+    services: List<Service>,
+    onServiceClick: (Service) -> Unit = {}
+) {
     Column {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -233,10 +359,11 @@ fun ServicesSection() {
         ) {
             Text(
                 text = "Services",
-                style = MaterialTheme.typography.headlineSmall
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(16.dp)
             )
 
-            IconButton(onClick = { /* Handle navigation */ }) {
+            IconButton(onClick = { /* Handle view all services click */ }) {
                 Icon(
                     imageVector = Icons.Default.ArrowForward,
                     contentDescription = "View all services"
@@ -246,27 +373,32 @@ fun ServicesSection() {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Horizontal scrolling services
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.padding(vertical = 8.dp)
         ) {
-            items(3) { index ->
-                ServiceCard(serviceName = "Service ${index + 1}")
+            items(services) { service ->
+                ServiceCard(
+                    service = service,
+                    onClick = { onServiceClick(service) }
+                )
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-
     }
 }
 
 @Composable
-fun ServiceCard(serviceName: String) {
+fun ServiceCard(
+    service: Service,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .width(120.dp)
-            .height(80.dp),
+            .height(80.dp)
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -275,11 +407,10 @@ fun ServiceCard(serviceName: String) {
             contentAlignment = Alignment.Center,
             modifier = Modifier.fillMaxSize()
         ) {
-            Text(text = serviceName)
+            Text(text = service.displayedName)
         }
     }
 }
-
 
 
 

@@ -45,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import com.google.android.gms.auth.api.signin.GoogleSignIn
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,13 +59,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_clinic.R
 //import com.example.e_clinic.R
 import com.example.e_clinic.ui.activities.doctor_screens.DoctorLogInActivity
 import com.example.e_clinic.ui.theme.EClinicTheme
-import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
@@ -303,5 +304,16 @@ fun LogInScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+@Preview
+fun LogInScreenPreview() {
+    EClinicTheme {
+        LogInScreen(
+            onSignUpClick = {},
+            onSignInSuccess = {}
+        )
     }
 }
