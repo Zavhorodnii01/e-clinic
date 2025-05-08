@@ -64,6 +64,18 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
     var address by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
+    val calendar = remember { Calendar.getInstance() }
+    val genderOptions = listOf("Male", "Female")
+    var expanded by remember { mutableStateOf(false) }
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            dob = String.format("%02d/%02d/%04d", dayOfMonth, month + 1, year)
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
 
     val googleSignUpLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -212,7 +224,38 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Address") }, modifier = Modifier.fillMaxWidth())
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = dob, modifier = Modifier.clickable { /* Show date picker */ }, color = Color.Blue)
+        Text(
+            text = dob,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { datePickerDialog.show() }
+                .padding(12.dp),
+            color = if (dob == "Select Date of Birth") Color.Gray else Color.Black
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            genderOptions.forEach { gender ->
+                DropdownMenuItem(
+                    text = { Text(gender) },
+                    onClick = {
+                        selectedGender = gender
+                        expanded = false
+                    }
+                )
+            }
+        }
+        Text(
+            text = selectedGender,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = true }
+                .padding(12.dp),
+            color = if (selectedGender == "Select Gender") Color.Gray else Color.Black
+        )
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(onClick = { registerUser() }, modifier = Modifier.fillMaxWidth()) { Text("Register") }

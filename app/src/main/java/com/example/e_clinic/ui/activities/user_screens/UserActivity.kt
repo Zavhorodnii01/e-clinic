@@ -1,5 +1,6 @@
 package com.example.e_clinic.ui.activities.user_screens
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import com.example.e_clinic.services.Service
@@ -19,6 +20,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -49,6 +53,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -67,8 +72,12 @@ import androidx.navigation.compose.composable
 import com.example.e_clinic.ui.theme.EClinicTheme
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.e_clinic.Firebase.collections.Appointment
+import com.example.e_clinic.Firebase.repositories.AppointmentRepository
+import com.example.e_clinic.Firebase.repositories.DoctorRepository
 import com.example.e_clinic.services.functions.appServices
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
 
 
@@ -100,11 +109,20 @@ fun MainScreen() {
 
     //TODO: Fetch user info from Firebase
 
-//    val user = FirebaseAuth.getInstance().currentUser
-//    user?.let {
-//        userName = it.displayName ?: "Unknown User"
-//        userEmail = it.email ?: "No Email"
-//    }
+    val user = FirebaseAuth.getInstance().currentUser
+    user?.let {
+        val userId = it.uid
+        val db = FirebaseFirestore.getInstance()
+        db.collection("users").document(userId).get()
+            .addOnSuccessListener { document ->
+                if (document != null) {
+                    userName = document.getString("name") ?: "Unknown User"
+                }
+            }
+            .addOnFailureListener {
+                userName = "Unknown User"
+            }
+    }
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -210,23 +228,22 @@ fun ServicesScreen(coroutineScope: CoroutineScope) {
     //TODO: Actual Settings Screen UI
     val scrollState = rememberScrollState()
     val services = appServices()
+    val context = LocalContext.current
 
-    Column {
-        Column {
-            Text(
-                text = "Your Services",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(16.dp)
-            )
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(services) { service ->
-                    ServiceListItem(service = service, onClick = {
-                        // Handle service click
-                    })
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(services) { service ->
+            ServiceListItem(service = service, onClick = {
+                when (service.name) {
+                    "appointment" -> {
+                        val intent = Intent(context, AppointmentActivity::class.java)
+                        intent.putExtra("user_id", FirebaseAuth.getInstance().currentUser?.uid ?: "")
+                        context.startActivity(intent)
+                    }
+                    // other services...
                 }
-            }
+            })
         }
     }
 }
@@ -277,33 +294,43 @@ fun DocumentsScreen() {
 fun HomeScreen() {
     //TODO: Actual Home Screen UI
     val scrollState = rememberScrollState()
-
-    val services = appServices()
-    Column {
-
-        Column {
-            Text(
-                text = "Upcoming Appointments",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(16.dp)
-            )
-
-
-            //TODO: Fetch appointments from Firebase as LazyList
-            val appointments = listOf(
-                "List item" to "Supporting line text lorem ipsum dolor sit amet, consectetur.",
-                "List item" to "Supporting line text lorem ipsum dolor sit amet, consectetur.",
-                "List item" to "Supporting line text lorem ipsum dolor sit amet, consectetur."
-            )
-
-            LazyColumn {
-                items(appointments) { (title, description) ->
-                    AppointmentItem(title = title, description = description)
-                    Spacer(modifier = Modifier.height(12.dp))
+    val user = FirebaseAuth.getInstance().currentUser
+    val context = LocalContext.current
+    val appointmentRepository = AppointmentRepository()
+    val appointments = remember { mutableStateListOf<Appointment>() }
+    LaunchedEffect(user) {
+        user?.let {
+            appointmentRepository.getAppointmentsForUser(it.uid) { loadedAppointments ->
+                val doctorRepository = DoctorRepository()
+                appointments.clear()
+                loadedAppointments.forEach { appointment ->
+                    doctorRepository.getDoctorById(appointment.doctor_id) { doctor ->
+                        val doctorName = doctor?.name ?: "Unknown Doctor"
+                        appointments.add(appointment.copy(doctor_id = doctorName))
+                    }
                 }
             }
         }
+    }
 
+
+    val services = appServices()
+    Column {
+        Text(
+            text = "Upcoming Appointments",
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(16.dp)
+        )
+
+        LazyColumn(modifier = Modifier.padding(horizontal = 16.dp)) {
+            items(appointments) { appointment ->
+                AppointmentItem(
+                    title = "Doctor: ${appointment.doctor_id}",
+                    description = "Date & Time: ${appointment.date_and_time}"
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
         Divider()
@@ -312,11 +339,16 @@ fun HomeScreen() {
         ServicesSection(
             services = services,
             onServiceClick = { service ->
-                // Handle service click
+                when (service.name) {
+                    "appointment" -> {
+                        val intent = Intent(context, AppointmentActivity::class.java)
+                        intent.putExtra("user_id", FirebaseAuth.getInstance().currentUser?.uid ?: "")
+                        context.startActivity(intent)
+                    }
+                    // Handle other services here
+                }
             }
         )
-
-
     }
 }
 
@@ -373,7 +405,9 @@ fun ServicesSection(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        LazyRow(
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.padding(vertical = 8.dp)
         ) {
@@ -384,6 +418,7 @@ fun ServicesSection(
                 )
             }
         }
+
 
         Spacer(modifier = Modifier.height(16.dp))
     }
@@ -397,7 +432,7 @@ fun ServiceCard(
     Card(
         modifier = Modifier
             .width(120.dp)
-            .height(80.dp)
+            .height(120.dp)
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant

@@ -19,4 +19,12 @@ class DoctorRepository {
                 onSuccess(result.toObjects(Doctor::class.java))
             }
     }
+
+    fun getDoctorById(doctorId: String, onSuccess: (Doctor?) -> Unit) {
+        collection.document(doctorId).get()
+            .addOnSuccessListener { document ->
+                onSuccess(document.toObject(Doctor::class.java))
+            }
+    }
+
 }
