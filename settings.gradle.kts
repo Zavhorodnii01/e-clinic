@@ -11,14 +11,16 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("https://storage.zego.im/maven") }
+        maven { url = uri("https://www.jitpack.io") }
     }
 }
 
 rootProject.name = "e-clinic"
 include(":app")
- 
