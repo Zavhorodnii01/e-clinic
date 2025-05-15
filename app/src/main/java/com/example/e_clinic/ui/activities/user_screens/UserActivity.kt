@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -29,15 +28,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -48,7 +46,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -60,12 +57,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -159,7 +153,7 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier) {
     val coroutineScope = rememberCoroutineScope()
     NavHost(navController = navController, startDestination = "home", modifier = modifier) {
         composable("home") { HomeScreen() }
-        composable("services") { ServicesScreen(coroutineScope = coroutineScope)}
+        composable("messages") { MessagesScreen(coroutineScope = coroutineScope)}
         composable("documents") { DocumentsScreen() }
         composable("settings") { SettingsScreen(onClose = {}) }
         // TODO: Handling the services lists
@@ -224,53 +218,48 @@ fun SettingsScreen(onClose: () -> Unit) {
 }
 
 @Composable
-fun ServicesScreen(coroutineScope: CoroutineScope) {
-    //TODO: Actual Settings Screen UI
-    val scrollState = rememberScrollState()
-    val services = appServices()
-    val context = LocalContext.current
+fun MessagesScreen(coroutineScope: CoroutineScope) {
+    Column {
+        Text(
+            text = "Your Chats",
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(16.dp)
+        )
+    }
+    val chats = listOf(
+        "John Doe: Hey, how are you?",
+        "Jane Smith: Let's meet tomorrow.",
+        "Alice Johnson: Can you send me the file?",
+        "Bob Brown: Thanks for the update!",
+        "Charlie Davis: See you at 5 PM."
+    )
 
     LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(services) { service ->
-            ServiceListItem(service = service, onClick = {
-                when (service.name) {
-                    "appointment" -> {
-                        val intent = Intent(context, AppointmentActivity::class.java)
-                        intent.putExtra("user_id", FirebaseAuth.getInstance().currentUser?.uid ?: "")
-                        context.startActivity(intent)
-                    }
-                    // other services...
-                }
-            })
+        items(chats) { chat ->
+            ChatItem(chat = chat)
         }
     }
 }
+
 @Composable
-fun ServiceListItem(
-    service: Service,
-    onClick: () -> Unit
-) {
+fun ChatItem(chat: String) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
+            .clickable { /* Handle chat click */ },
+        shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = service.displayedName,
-                style = MaterialTheme.typography.titleMedium
-            )
-            if (service.description.isNotBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = service.description,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-        }
+        Text(
+            text = chat,
+            modifier = Modifier.padding(16.dp),
+            style = MaterialTheme.typography.bodyLarge
+        )
     }
 }
 
@@ -342,6 +331,11 @@ fun HomeScreen() {
                 when (service.name) {
                     "appointment" -> {
                         val intent = Intent(context, AppointmentActivity::class.java)
+                        intent.putExtra("user_id", FirebaseAuth.getInstance().currentUser?.uid ?: "")
+                        context.startActivity(intent)
+                    }
+                    "prescription" -> {
+                        val intent = Intent(context, PrescriptionListActivity::class.java)
                         intent.putExtra("user_id", FirebaseAuth.getInstance().currentUser?.uid ?: "")
                         context.startActivity(intent)
                     }
@@ -453,7 +447,7 @@ fun ServiceCard(
 fun BottomNavigationBar(navController: NavHostController) {
     val items = listOf(
         BottomNavItem.Home,
-        BottomNavItem.Services,
+        BottomNavItem.Messages,
         BottomNavItem.Documents
     )
 
@@ -476,7 +470,7 @@ fun BottomNavigationBar(navController: NavHostController) {
                 icon = {
                     when (item) {
                         BottomNavItem.Home -> Icon(Icons.Default.Home, contentDescription = "Home")
-                        BottomNavItem.Services -> Icon(Icons.Default.List, contentDescription = "S")
+                        BottomNavItem.Messages -> Icon(Icons.Default.Email, contentDescription = "S")
                         BottomNavItem.Documents -> Icon(Icons.Default.AccountBox, contentDescription = "2")
                     }
                 },
@@ -489,7 +483,7 @@ fun BottomNavigationBar(navController: NavHostController) {
 // Sealed class to define different bottom navigation items
 sealed class BottomNavItem(val route: String, val title: String) {
     object Home : BottomNavItem("home", "Home")
-    object Services : BottomNavItem("services", "Services")
+    object Messages : BottomNavItem("messages", "Messages")
     object Documents : BottomNavItem("documents", "Documents")
 }
 

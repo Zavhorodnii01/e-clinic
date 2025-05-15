@@ -38,7 +38,7 @@
             android:name=".ui.activities.doctor_screens.DoctorLogInActivity"
             android:exported="true" />
         <activity
-            android:name=".ui.activities.user_screens.UserLogInActivity"
+            android:name=".ui.activities.LogInActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Eclinic" >
@@ -47,6 +47,12 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+        <activity android:name=".ui.activities.doctor_screens.PrescribeActivity">
+
+        </activity>
+        <activity android:name=".ui.activities.user_screens.PrescriptionListActivity">
+
         </activity>
     </application>
 
