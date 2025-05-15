@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
@@ -69,6 +70,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.e_clinic.Firebase.collections.Appointment
 import com.example.e_clinic.Firebase.repositories.AppointmentRepository
 import com.example.e_clinic.Firebase.repositories.DoctorRepository
+import com.example.e_clinic.ZEGOCloud.launchZegoChat
 import com.example.e_clinic.services.functions.appServices
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -117,21 +119,19 @@ fun MainScreen() {
                 userName = "Unknown User"
             }
     }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Welcome $userName !") },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary, // Background color
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer// Title color
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 actions = {
                     IconButton(onClick = { showSettings = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = "Menu"
-                        )
+                        Icon(imageVector = Icons.Default.Menu, contentDescription = "Menu")
                     }
                 }
             )
@@ -139,7 +139,7 @@ fun MainScreen() {
         bottomBar = {
             BottomNavigationBar(navController = navController)
         }
-    ) {innerPadding ->
+    ) { innerPadding ->
         NavigationHost(navController = navController, modifier = Modifier.padding(innerPadding))
     }
     if (showSettings) {
@@ -153,7 +153,7 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier) {
     val coroutineScope = rememberCoroutineScope()
     NavHost(navController = navController, startDestination = "home", modifier = modifier) {
         composable("home") { HomeScreen() }
-        composable("messages") { MessagesScreen(coroutineScope = coroutineScope)}
+        composable("services") { ServicesScreen(coroutineScope = rememberCoroutineScope()) }
         composable("documents") { DocumentsScreen() }
         composable("settings") { SettingsScreen(onClose = {}) }
         // TODO: Handling the services lists
@@ -166,50 +166,24 @@ fun SettingsScreen(onClose: () -> Unit) {
     LaunchedEffect(Unit) {
         visibility = true
     }
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(),
+            modifier = Modifier.fillMaxWidth().fillMaxHeight(),
             shape = RoundedCornerShape(12.dp),
             tonalElevation = 8.dp,
             color = MaterialTheme.colorScheme.surface
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
+            Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     IconButton(onClick = { onClose() }) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close"
-                        )
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                        Text(
-                            text = "Settings",
-                            style = MaterialTheme.typography.headlineSmall,
-                            modifier = Modifier.padding(16.dp)
-                        )
+                        Text(text = "Settings", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(16.dp))
                     }
                 }
             }
@@ -218,51 +192,41 @@ fun SettingsScreen(onClose: () -> Unit) {
 }
 
 @Composable
-fun MessagesScreen(coroutineScope: CoroutineScope) {
-    Column {
-        Text(
-            text = "Your Chats",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(16.dp)
-        )
-    }
-    val chats = listOf(
-        "John Doe: Hey, how are you?",
-        "Jane Smith: Let's meet tomorrow.",
-        "Alice Johnson: Can you send me the file?",
-        "Bob Brown: Thanks for the update!",
-        "Charlie Davis: See you at 5 PM."
-    )
+fun ServicesScreen(coroutineScope: CoroutineScope) {
+    val scrollState = rememberScrollState()
+    val services = appServices()
+    val context = LocalContext.current
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(chats) { chat ->
-            ChatItem(chat = chat)
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(16.dp)) {
+        items(services) { service ->
+            ServiceListItem(service = service, onClick = {
+                when (service.name) {
+                    "appointment" -> {
+                        val intent = Intent(context, AppointmentActivity::class.java)
+                        intent.putExtra("user_id", FirebaseAuth.getInstance().currentUser?.uid ?: "")
+                        context.startActivity(intent)
+                    }
+                    "doctor_chat" -> {
+                        launchZegoChat(context)
+                    }
+                }
+            })
         }
     }
 }
 
 @Composable
-fun ChatItem(chat: String) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { /* Handle chat click */ },
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Text(
-            text = chat,
-            modifier = Modifier.padding(16.dp),
-            style = MaterialTheme.typography.bodyLarge
-        )
+fun ServiceListItem(service: Service, onClick: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().clickable { onClick() }, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = service.displayedName, style = MaterialTheme.typography.titleMedium)
+            if (service.description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = service.description, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
     }
 }
-
 
 @Composable
 fun DocumentsScreen() {
@@ -346,144 +310,50 @@ fun HomeScreen() {
     }
 }
 
-
-
 @Composable
 fun AppointmentItem(title: String, description: String) {
-    var checked by remember { mutableStateOf(false) }
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+        Icon(imageVector = Icons.Default.AccountBox, contentDescription = "Doctor Icon", modifier = Modifier.padding(end = 16.dp))
         Column {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
+            Text(text = title, style = MaterialTheme.typography.bodyMedium)
+            Text(text = description, style = MaterialTheme.typography.bodySmall)
         }
-    }
-}
-
-
-@Composable
-fun ServicesSection(
-    services: List<Service>,
-    onServiceClick: (Service) -> Unit = {}
-) {
-    Column {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                text = "Services",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(16.dp)
-            )
-
-            IconButton(onClick = { /* Handle view all services click */ }) {
-                Icon(
-                    imageVector = Icons.Default.ArrowForward,
-                    contentDescription = "View all services"
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(vertical = 8.dp)
-        ) {
-            items(services) { service ->
-                ServiceCard(
-                    service = service,
-                    onClick = { onServiceClick(service) }
-                )
-            }
-        }
-
-
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
 @Composable
-fun ServiceCard(
-    service: Service,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .width(120.dp)
-            .height(120.dp)
-            .clickable { onClick() },
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Text(text = service.displayedName)
+fun ServicesSection(services: List<Service>, onServiceClick: (Service) -> Unit) {
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(text = "Services", style = MaterialTheme.typography.headlineMedium)
+        services.forEach { service ->
+            ServiceListItem(service = service, onClick = { onServiceClick(service) })
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
-
-
 
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {
-    val items = listOf(
-        BottomNavItem.Home,
-        BottomNavItem.Messages,
-        BottomNavItem.Documents
-    )
-
-    NavigationBar {
-        val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentRoute = navBackStackEntry?.destination?.route
-
-        items.forEach { item ->
-            NavigationBarItem(
-                selected = currentRoute == item.route,
-                onClick = {
-                    if (currentRoute != item.route) {
-                        navController.navigate(item.route) {
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                },
-                icon = {
-                    when (item) {
-                        BottomNavItem.Home -> Icon(Icons.Default.Home, contentDescription = "Home")
-                        BottomNavItem.Messages -> Icon(Icons.Default.Email, contentDescription = "S")
-                        BottomNavItem.Documents -> Icon(Icons.Default.AccountBox, contentDescription = "2")
-                    }
-                },
-                label = { Text(text = item.title) }
-            )
-        }
+    NavigationBar(modifier = Modifier.fillMaxWidth()) {
+        NavigationBarItem(
+            icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+            label = { Text("Home") },
+            selected = false,
+            onClick = { navController.navigate("home") }
+        )
+        NavigationBarItem(
+            icon = { Icon(Icons.Default.List, contentDescription = "Services") },
+            label = { Text("Services") },
+            selected = false,
+            onClick = { navController.navigate("services") }
+        )
     }
 }
 
 // Sealed class to define different bottom navigation items
 sealed class BottomNavItem(val route: String, val title: String) {
     object Home : BottomNavItem("home", "Home")
-    object Messages : BottomNavItem("messages", "Messages")
+    object Services : BottomNavItem("services", "Services")
     object Documents : BottomNavItem("documents", "Documents")
 }
 

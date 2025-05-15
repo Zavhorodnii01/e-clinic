@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.Eclinic" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- AppCompat theme for your app -->
+    <style name="Theme.Eclinic" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Customize your theme with colors or other attributes if needed -->
+
+    </style>
+
 </resources>
