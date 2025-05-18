@@ -252,7 +252,7 @@ fun HomeScreen() {
 
         LazyColumn(modifier = Modifier.padding(horizontal = 16.dp)) {
             items(appointments) { appointment ->
-                AppointmentItem(title = "Doctor: ${appointment.doctor_id}", description = "Date & Time: ${appointment.date_and_time}")
+                AppointmentItem(title = "Doctor: ${appointment.doctor_id}", description = "Date & Time: ${appointment.date}")
                 Spacer(modifier = Modifier.height(12.dp))
             }
         }

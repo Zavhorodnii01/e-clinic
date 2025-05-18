@@ -2,7 +2,7 @@ package com.example.e_clinic.Firebase.collections
 
 import com.google.firebase.firestore.DocumentId
 
-data class Timeslot(
+data class TimeSlot(
     @DocumentId val id: String = "",
     val doctor_id: String = "",
     val first_day_of_week: String = "",

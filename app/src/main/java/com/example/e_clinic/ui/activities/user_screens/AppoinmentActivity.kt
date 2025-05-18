@@ -132,9 +132,10 @@ fun AppointmentScreen(userId: String, onAppointmentMade: () -> Unit) {
                 if (selectedDoctor.isNotEmpty() && selectedDate.isNotEmpty() && selectedTime.isNotEmpty()) {
                     val doctorId = selectedDoctor.substringAfter("ID: ").trim()
                     val appointment = Appointment(
-                        date_and_time = "$selectedDate $selectedTime",
+                        date = "$selectedDate $selectedTime",
                         doctor_id = doctorId,
-                        user_id = userId
+                        user_id = userId,
+                        status = "not finished"
                     )
 
                     appointmentRepository.bookAppointment(appointment) { success ->
