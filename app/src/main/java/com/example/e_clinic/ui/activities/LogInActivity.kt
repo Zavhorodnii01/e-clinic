@@ -1,7 +1,8 @@
-package com.example.e_clinic.ui.activities.user_screens
+package com.example.e_clinic.ui.activities
 
 import android.app.Activity
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -60,15 +61,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_clinic.R
-//import com.example.e_clinic.R
+import com.example.e_clinic.ui.activities.admin_screens.AdminActivity
+//import com.example.e_clinic.ui.activities.user_screens.UserActivity
+import com.example.e_clinic.ui.activities.user_screens.UserSignUpActivity
 import com.example.e_clinic.ui.activities.user_screens.user_activity.UserActivity
+//import com.example.e_clinic.R
 import com.example.e_clinic.ui.theme.EClinicTheme
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.firestore.FirebaseFirestore
 
 
-class UserLogInActivity : ComponentActivity() {
+class LogInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -86,8 +91,7 @@ class UserLogInActivity : ComponentActivity() {
                         startActivity(intent)
                     },
                     onSignInSuccess = {
-                        val intent = Intent(this, UserActivity::class.java)
-                        startActivity(intent)
+                        launcher(this)
                     }
                 )
 
@@ -103,15 +107,6 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
         modifier = modifier
     )
 }
-
-/*@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    EClinicTheme {
-        Greeting("Android")
-    }
-}*/
-
 
 
 @Composable
@@ -141,6 +136,7 @@ fun LogInScreen(
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
+    var selectedRole by remember { mutableStateOf("Patient") }
 
     Column(
         modifier = Modifier
@@ -178,7 +174,8 @@ fun LogInScreen(
                 .padding(vertical = 4.dp)
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+
+        //TODO: Add a checkbox for "Remember Me" functionality, automatically detect the user's role
 
         Button(
             onClick = {
@@ -310,4 +307,39 @@ fun LogInScreenPreview() {
             onSignInSuccess = {}
         )
     }
+}
+
+fun launcher(context: Context){
+    val email = FirebaseAuth.getInstance().currentUser!!.email!!
+    val db = FirebaseFirestore.getInstance()
+
+    db.collection("administrators")
+        .whereEqualTo("e-mail", email)
+        .get()
+        .addOnSuccessListener { adminResult ->
+            if (!adminResult.isEmpty){
+                context.startActivity(Intent(context, AdminActivity::class.java))
+            }
+            else{
+                db.collection("doctors")
+                    .whereEqualTo("e-mail", email)
+                    .get()
+                    .addOnSuccessListener { doctorResult ->
+                        if (!doctorResult.isEmpty){
+                            context.startActivity(Intent(context, UserActivity::class.java))
+                        }
+                        else{
+                            context.startActivity(Intent(context, UserActivity::class.java))
+                        }
+                    }
+                    .addOnFailureListener { exception ->
+                        Toast.makeText(context, "Error getting user data: ${exception.message}", Toast.LENGTH_SHORT).show()
+                    }
+            }
+
+        }
+
+
+
+
 }

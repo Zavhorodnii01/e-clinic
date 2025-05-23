@@ -25,6 +25,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.e_clinic.Firebase.collections.User
 import com.example.e_clinic.R
+import com.example.e_clinic.ui.activities.LogInActivity
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
@@ -40,7 +41,7 @@ class UserSignUpActivity : ComponentActivity() {
         setContent {
             enableEdgeToEdge()
             RegistrationScreen(onSignUpSuccess = {
-                val intent = Intent(this, UserLogInActivity::class.java)
+                val intent = Intent(this, LogInActivity::class.java)
                 startActivity(intent)
             })
         }

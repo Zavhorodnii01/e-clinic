@@ -77,6 +77,8 @@ dependencies {
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.storage.ktx)
+    implementation("com.github.ZEGOCLOUD:zego_inapp_chat_uikit_android:+")
+
 
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -106,3 +108,4 @@ dependencies {
 
     implementation("com.github.ZEGOCLOUD:zego_inapp_chat_uikit_android:+")
 }
+
