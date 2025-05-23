@@ -48,6 +48,7 @@ fun HomeScreen() {
     }
 
     val services = appServices()
+/*
     Column {
         Text(text = "Upcoming Appointments", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(16.dp))
 
@@ -72,4 +73,5 @@ fun HomeScreen() {
             }"""
         })
     }
+*/
 }

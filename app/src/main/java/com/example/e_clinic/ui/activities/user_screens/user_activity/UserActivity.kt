@@ -1,14 +1,13 @@
 package com.example.e_clinic.ui.activities.user_screens.user_activity
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import com.example.e_clinic.services.Service
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -32,7 +31,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
@@ -42,6 +40,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.e_clinic.ui.theme.EClinicTheme
 import androidx.navigation.compose.rememberNavController
+import com.example.e_clinic.ZEGOCloud.launchZegoChat
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.e_clinic.ui.activities.doctor_screens.ServiceListItem
@@ -140,12 +139,19 @@ fun PreviewMainScreen() {
     }
 }
 
-
-
-
-
-
 @Composable
+fun ChatScreen() {
+    val context = LocalContext.current
+    launchZegoChat(context)
+    //val context = LocalContext.current
+    Text("Chat Screen")
+}
+
+
+
+
+
+/*@Composable
 fun AppointmentItem(title: String, description: String) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(8.dp)) {
         Icon(imageVector = Icons.Default.AccountBox, contentDescription = "Doctor Icon", modifier = Modifier.padding(end = 16.dp))
@@ -154,7 +160,7 @@ fun AppointmentItem(title: String, description: String) {
             Text(text = description, style = MaterialTheme.typography.bodySmall)
         }
     }
-}
+}*/
 
 @Composable
 fun ServicesSection(services: List<Service>, onServiceClick: (Service) -> Unit) {
