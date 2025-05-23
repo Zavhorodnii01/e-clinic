@@ -1,12 +1,10 @@
-package com.example.e_clinic.ui.activities.user_screens
+package com.example.e_clinic.ui.activities.user_screens.user_activity
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Intent
-import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,23 +17,9 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.*
 
-class AppointmentActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val userId = intent.getStringExtra("user_id") ?: "unknown_user"
-        setContent {
-            AppointmentScreen(userId = userId) {
-                // Navigate back to UserActivity after successful appointment
-                startActivity(Intent(this, UserActivity::class.java))
-                finish()
-            }
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppointmentScreen(userId: String, onAppointmentMade: () -> Unit) {
+fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
     val doctors = remember { mutableStateListOf<String>() }
@@ -75,7 +59,9 @@ fun AppointmentScreen(userId: String, onAppointmentMade: () -> Unit) {
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Select Doctor") },
-                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth(),
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded)
                 }

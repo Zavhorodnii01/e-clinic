@@ -27,7 +27,7 @@
             android:name=".ZEGOCloud.LogActivity"
             android:exported="true" />
         <activity
-            android:name=".ui.activities.user_screens.AppointmentActivity"
+            android:name=".ui.activities.user_screens.user_activity.AppointmentActivity"
             android:exported="false" />
         <activity
             android:name=".ui.activities.logIn_screen.LogInActivity"
@@ -45,7 +45,7 @@
             android:name=".ui.activities.admin_screens.AdminLogInActivity"
             android:exported="true" />
         <activity
-            android:name=".ui.activities.user_screens.UserActivity"
+            android:name=".ui.activities.user_screens.user_activity.UserActivity"
             android:exported="true" />
         <activity
             android:name=".ui.activities.doctor_screens.DoctorLogInActivity"
