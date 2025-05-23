@@ -19,9 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,7 +27,6 @@ import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
@@ -58,14 +54,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.e_clinic.ui.theme.EClinicTheme
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.e_clinic.Firebase.collections.Appointment
 import com.example.e_clinic.Firebase.repositories.AppointmentRepository
@@ -77,20 +74,17 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
 
 
-//TODO: UserActivity and functions
-
 class UserActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent  {
-            EClinicTheme{
+            EClinicTheme {
                 MainScreen()
             }
         }
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,10 +94,6 @@ fun MainScreen() {
     val context = LocalContext.current
     var showSettings by remember { mutableStateOf(false) }
     var userName by remember { mutableStateOf("") }
-    var userEmail by remember { mutableStateOf("") }
-
-
-    //TODO: Fetch user info from Firebase
 
     val user = FirebaseAuth.getInstance().currentUser
     user?.let {
@@ -145,18 +135,15 @@ fun MainScreen() {
     if (showSettings) {
         SettingsScreen(onClose = { showSettings = false })
     }
-
 }
 
 @Composable
 fun NavigationHost(navController: NavHostController, modifier: Modifier) {
-    val coroutineScope = rememberCoroutineScope()
     NavHost(navController = navController, startDestination = "home", modifier = modifier) {
         composable("home") { HomeScreen() }
         composable("services") { ServicesScreen(coroutineScope = rememberCoroutineScope()) }
         composable("documents") { DocumentsScreen() }
         composable("settings") { SettingsScreen(onClose = {}) }
-        // TODO: Handling the services lists
     }
 }
 
@@ -230,27 +217,20 @@ fun ServiceListItem(service: Service, onClick: () -> Unit) {
 
 @Composable
 fun DocumentsScreen() {
-    //TODO: Implement Documents Screen UI with Firebase operations
     val scrollState = rememberScrollState()
-
     Column {
-        Text(
-            text = "Your Documents",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(16.dp)
-        )
+        Text(text = "Your Documents", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(16.dp))
     }
-
 }
 
 @Composable
 fun HomeScreen() {
-    //TODO: Actual Home Screen UI
     val scrollState = rememberScrollState()
     val user = FirebaseAuth.getInstance().currentUser
     val context = LocalContext.current
     val appointmentRepository = AppointmentRepository()
     val appointments = remember { mutableStateListOf<Appointment>() }
+
     LaunchedEffect(user) {
         user?.let {
             appointmentRepository.getAppointmentsForUser(it.uid) { loadedAppointments ->
@@ -266,21 +246,13 @@ fun HomeScreen() {
         }
     }
 
-
     val services = appServices()
     Column {
-        Text(
-            text = "Upcoming Appointments",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(16.dp)
-        )
+        Text(text = "Upcoming Appointments", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(16.dp))
 
         LazyColumn(modifier = Modifier.padding(horizontal = 16.dp)) {
             items(appointments) { appointment ->
-                AppointmentItem(
-                    title = "Doctor: ${appointment.doctor_id}",
-                    description = "Date & Time: ${appointment.date_and_time}"
-                )
+                AppointmentItem(title = "Doctor: ${appointment.doctor_id}", description = "Date & Time: ${appointment.date}")
                 Spacer(modifier = Modifier.height(12.dp))
             }
         }
@@ -289,24 +261,15 @@ fun HomeScreen() {
         Divider()
         Spacer(modifier = Modifier.height(24.dp))
 
-        ServicesSection(
-            services = services,
-            onServiceClick = { service ->
-                when (service.name) {
-                    "appointment" -> {
-                        val intent = Intent(context, AppointmentActivity::class.java)
-                        intent.putExtra("user_id", FirebaseAuth.getInstance().currentUser?.uid ?: "")
-                        context.startActivity(intent)
-                    }
-                    "prescription" -> {
-                        val intent = Intent(context, PrescriptionListActivity::class.java)
-                        intent.putExtra("user_id", FirebaseAuth.getInstance().currentUser?.uid ?: "")
-                        context.startActivity(intent)
-                    }
-                    // Handle other services here
+        ServicesSection(services = services, onServiceClick = { service ->
+            when (service.name) {
+                "appointment" -> {
+                    val intent = Intent(context, AppointmentActivity::class.java)
+                    intent.putExtra("user_id", FirebaseAuth.getInstance().currentUser?.uid ?: "")
+                    context.startActivity(intent)
                 }
             }
-        )
+        })
     }
 }
 
@@ -347,21 +310,5 @@ fun BottomNavigationBar(navController: NavHostController) {
             selected = false,
             onClick = { navController.navigate("services") }
         )
-    }
-}
-
-// Sealed class to define different bottom navigation items
-sealed class BottomNavItem(val route: String, val title: String) {
-    object Home : BottomNavItem("home", "Home")
-    object Services : BottomNavItem("services", "Services")
-    object Documents : BottomNavItem("documents", "Documents")
-}
-
-
-@Preview
-@Composable
-fun PreviewUserActivity() {
-    EClinicTheme {
-        MainScreen()
     }
 }

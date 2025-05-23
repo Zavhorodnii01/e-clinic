@@ -1,9 +1,9 @@
 package com.example.e_clinic.Firebase.repositories
 
-import com.example.e_clinic.Firebase.collections.Timeslot
+import com.example.e_clinic.Firebase.collections.TimeSlot
 import com.google.firebase.firestore.FirebaseFirestore
 
-class TimeslotRepository {
+class TimeSlotRepository {
     private val db = FirebaseFirestore.getInstance()
     private val collection = db.collection("timeslots")
 
@@ -14,10 +14,10 @@ class TimeslotRepository {
             .addOnFailureListener { onComplete(false) }
     }
 
-    fun getTimeslotsForDoctor(doctorId: String, onSuccess: (List<Timeslot>) -> Unit) {
+    fun getTimeslotsForDoctor(doctorId: String, onSuccess: (List<TimeSlot>) -> Unit) {
         collection.whereEqualTo("doctor_id", doctorId).get()
             .addOnSuccessListener { result ->
-                onSuccess(result.toObjects(Timeslot::class.java))
+                onSuccess(result.toObjects(TimeSlot::class.java))
             }
     }
 }

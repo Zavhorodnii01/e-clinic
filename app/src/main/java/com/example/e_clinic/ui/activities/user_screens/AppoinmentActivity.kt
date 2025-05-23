@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.e_clinic.Firebase.collections.Appointment
 import com.example.e_clinic.Firebase.repositories.AppointmentRepository
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.*
 
@@ -40,9 +41,10 @@ fun AppointmentScreen(userId: String, onAppointmentMade: () -> Unit) {
     val doctors = remember { mutableStateListOf<String>() }
     val appointmentRepository = AppointmentRepository()
     var selectedDoctor by remember { mutableStateOf("") }
-    var selectedDate by remember { mutableStateOf("") }
+    var selectedDate by remember { mutableStateOf<Timestamp?>(null) }
     var selectedTime by remember { mutableStateOf("") }
     var dropdownExpanded by remember { mutableStateOf(false) }
+    var displayDate by remember { mutableStateOf("") }
 
     // Fetch doctors from Firestore
     LaunchedEffect(Unit) {
@@ -100,14 +102,18 @@ fun AppointmentScreen(userId: String, onAppointmentMade: () -> Unit) {
             DatePickerDialog(
                 context,
                 { _, year, month, dayOfMonth ->
-                    selectedDate = "$dayOfMonth/${month + 1}/$year"
+                    val selectedCalendar = Calendar.getInstance().apply {
+                        set(year, month, dayOfMonth)
+                    }
+                    selectedDate = Timestamp(selectedCalendar.time)
+                    displayDate = "${dayOfMonth}/${month + 1}/$year"
                 },
                 calendar.get(Calendar.YEAR),
                 calendar.get(Calendar.MONTH),
                 calendar.get(Calendar.DAY_OF_MONTH)
             ).show()
         }) {
-            Text(text = if (selectedDate.isEmpty()) "Select Date" else selectedDate)
+            Text(text = if (displayDate.isEmpty()) "Select Date" else displayDate)
         }
 
         // Time picker
@@ -129,12 +135,23 @@ fun AppointmentScreen(userId: String, onAppointmentMade: () -> Unit) {
         // Submit button
         Button(
             onClick = {
-                if (selectedDoctor.isNotEmpty() && selectedDate.isNotEmpty() && selectedTime.isNotEmpty()) {
+                if (selectedDoctor.isNotEmpty() && selectedDate != null && selectedTime.isNotEmpty()) {
                     val doctorId = selectedDoctor.substringAfter("ID: ").trim()
+
+                    // Combine date and time
+                    val calendar = Calendar.getInstance().apply {
+                        time = selectedDate!!.toDate()
+                        val (hours, minutes) = selectedTime.split(":").map { it.toInt() }
+                        set(Calendar.HOUR_OF_DAY, hours)
+                        set(Calendar.MINUTE, minutes)
+                    }
+                    val appointmentDateTime = Timestamp(calendar.time)
+
                     val appointment = Appointment(
-                        date_and_time = "$selectedDate $selectedTime",
+                        date = appointmentDateTime,
                         doctor_id = doctorId,
-                        user_id = userId
+                        user_id = userId,
+                        status = "not finished"
                     )
 
                     appointmentRepository.bookAppointment(appointment) { success ->
