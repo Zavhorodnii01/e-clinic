@@ -14,11 +14,11 @@ class MyApplication : Application() {
     }
 
     private fun initZegocloud() {
-        val appId = BuildConfig.APP_ID.toLong()  // Make sure APP_ID is long
+        val appId = BuildConfig.APP_ID  // Make sure APP_ID is long
         val appSign = BuildConfig.APP_SIGN  // Ensure appSign is a String
 
         // Initialize ZEGOCLOUD using appId and appSign
-        ZIMKit.initWith(this, appId, appSign)
+        ZIMKit.initWith(this, appId.toLong(), appSign)
         ZIMKit.initNotifications()
     }
 
