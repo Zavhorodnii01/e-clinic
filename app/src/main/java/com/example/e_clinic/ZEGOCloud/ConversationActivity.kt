@@ -55,12 +55,11 @@ class ConversationActivity : AppCompatActivity() {
         popupMenu.show()
     }
 
-    private fun showNewChatDialog() {
+    private fun showNewChatDialog()
+    {
         val editText = EditText(this).apply {
             hint = "UserID"
         }
-
-
 
         AlertDialog.Builder(this)
             .setTitle("New chat")
@@ -76,5 +75,7 @@ class ConversationActivity : AppCompatActivity() {
             .setNegativeButton("Cancel", null)
             .create()
             .show()
+
+
     }
 }

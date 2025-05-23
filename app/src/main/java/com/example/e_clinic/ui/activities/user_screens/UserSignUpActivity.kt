@@ -25,13 +25,13 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.e_clinic.Firebase.collections.User
 import com.example.e_clinic.R
-import com.example.e_clinic.ui.activities.LogInActivity
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
+import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -41,7 +41,7 @@ class UserSignUpActivity : ComponentActivity() {
         setContent {
             enableEdgeToEdge()
             RegistrationScreen(onSignUpSuccess = {
-                val intent = Intent(this, LogInActivity::class.java)
+                val intent = Intent(this, UserLogInActivity::class.java)
                 startActivity(intent)
             })
         }
@@ -56,7 +56,7 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
 
     var name by remember { mutableStateOf("") }
     var surname by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf(preFilledEmail ?: "") } // Use preFilledEmail if available
+    var email by remember { mutableStateOf(preFilledEmail ?: "") }
     var phone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -68,6 +68,7 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
     val calendar = remember { Calendar.getInstance() }
     val genderOptions = listOf("Male", "Female")
     var expanded by remember { mutableStateOf(false) }
+
     val datePickerDialog = DatePickerDialog(
         context,
         { _, year, month, dayOfMonth ->
@@ -83,72 +84,52 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
             val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
             try {
                 val account = task.getResult(ApiException::class.java)
-                val email = account.email // Get the email from Google account
+                val email = account.email ?: return@rememberLauncherForActivityResult
 
-                // Check if email is already registered in Firebase
-                FirebaseAuth.getInstance().fetchSignInMethodsForEmail(email!!)
+                FirebaseAuth.getInstance().fetchSignInMethodsForEmail(email)
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
                             val signInMethods = task.result?.signInMethods
-                            if (signInMethods != null && signInMethods.isNotEmpty()) {
-                                // Email is already registered, sign the user in
-                                val credential = GoogleAuthProvider.getCredential(account.idToken, null)
-                                FirebaseAuth.getInstance().signInWithCredential(credential)
-                                    .addOnCompleteListener { authTask ->
-                                        if (authTask.isSuccessful) {
-                                            // User is successfully logged in
-                                            //successMessage = "Welcome back!"
-                                            //onSignUpSuccess()
-                                        } else {
-                                            errorMessage = "Google Sign-In Failed: ${authTask.exception?.message}"
-                                        }
-                                    }
-                            } else {
-                                // Email not registered, proceed with sign-up
-                                val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+                            val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+                            FirebaseAuth.getInstance().signInWithCredential(credential)
+                                .addOnCompleteListener { authTask ->
+                                    if (authTask.isSuccessful) {
+                                        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return@addOnCompleteListener
+                                        val userRef = db.collection("users").document(userId)
 
-                                FirebaseAuth.getInstance().signInWithCredential(credential)
-                                    .addOnCompleteListener { authTask ->
-                                        if (authTask.isSuccessful) {
-                                            val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return@addOnCompleteListener
-                                            val userRef = db.collection("users").document(userId)
-
-                                            userRef.get().addOnSuccessListener { document ->
-                                                if (!document.exists()) {
-                                                    // New Google user, store data in Firestore
-                                                    val newUser = User(
-                                                        id = userId,
-                                                        email = account.email.orEmpty(),
-                                                        name = account.displayName.orEmpty(),
-                                                        surname = "", // Google doesn't provide this
-                                                        phone = FirebaseAuth.getInstance().currentUser?.phoneNumber.orEmpty(),
-                                                        dob = "",
-                                                        gender = "",
-                                                        address = ""
-                                                    )
-                                                    userRef.set(newUser).addOnSuccessListener {
-                                                        successMessage = "Google Sign-Up Successful!"
-                                                        onSignUpSuccess()
-                                                    }.addOnFailureListener { exception ->
-                                                        errorMessage = "Firestore error: ${exception.message}"
-                                                    }
-                                                } else {
-                                                    // This should never happen because of the check above, but we handle it gracefully
-                                                    successMessage = "This email is registered"
-                                                    //onSignUpSuccess()
+                                        userRef.get().addOnSuccessListener { document ->
+                                            if (!document.exists()) {
+                                                val newUser = User(
+                                                    id = userId,
+                                                    email = email,
+                                                    name = account.displayName.orEmpty(),
+                                                    surname = "",
+                                                    phone = "",
+                                                    dob = "",
+                                                    gender = "",
+                                                    address = ""
+                                                )
+                                                userRef.set(newUser).addOnSuccessListener {
+                                                    successMessage = "Google Sign-Up Successful!"
+                                                    onSignUpSuccess()
+                                                }.addOnFailureListener {
+                                                    errorMessage = "Firestore error: ${it.message}"
                                                 }
+                                            } else {
+                                                successMessage = "Welcome back!"
+                                                onSignUpSuccess()
                                             }
-                                        } else {
-                                            errorMessage = "Google Sign-Up Failed: ${authTask.exception?.message}"
                                         }
+                                    } else {
+                                        errorMessage = "Google Sign-In Failed: ${authTask.exception?.message}"
                                     }
-                            }
+                                }
                         } else {
                             errorMessage = task.exception?.message ?: "Error checking email."
                         }
                     }
             } catch (e: ApiException) {
-                errorMessage = "Google Sign-Up Failed: ${e.message}"
+                errorMessage = "Google Sign-In Failed: ${e.message}"
             }
         }
     }
@@ -162,10 +143,7 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
                 .build()
         )
 
-        // Sign out first to ensure account selection prompt
-        GoogleSignIn.getLastSignedInAccount(context)?.let {
-            googleSignInClient.signOut()  // Explicit sign-out
-        }
+        googleSignInClient.signOut() // Force account chooser
 
         val signInIntent = googleSignInClient.signInIntent
         val pendingIntent = PendingIntent.getActivity(context, 0, signInIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
@@ -185,7 +163,12 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
         auth.createUserWithEmailAndPassword(email.trim(), password.trim())
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    val userId = auth.currentUser?.uid ?: return@addOnCompleteListener
+                    val firebaseUser = task.result.user
+                    firebaseUser?.sendEmailVerification()
+
+                    val userId = firebaseUser?.uid ?: return@addOnCompleteListener
+
+
                     val user = User(
                         id = userId,
                         email = email.trim(),
@@ -198,7 +181,7 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
                     )
                     db.collection("users").document(userId).set(user)
                         .addOnSuccessListener {
-                            successMessage = "Registration successful!"
+                            successMessage = "Registration successful! Please verify your email."
                             onSignUpSuccess()
                         }
                         .addOnFailureListener { exception ->
@@ -237,8 +220,7 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            modifier = Modifier.fillMaxWidth(),
-
+            modifier = Modifier.fillMaxWidth()
         ) {
             genderOptions.forEach { gender ->
                 DropdownMenuItem(
@@ -263,37 +245,27 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
         Button(onClick = { registerUser() }, modifier = Modifier.fillMaxWidth()) { Text("Register") }
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Google Sign-Up Button (as an alternative method)
         IconButton(
             onClick = { signUpWithGoogle() },
-            modifier = Modifier.size(200.dp) // Adjust size for the icon
+            modifier = Modifier.size(200.dp)
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.google_sign_up), // Use your Google icon
+                painter = painterResource(id = R.drawable.google_sign_up),
                 contentDescription = "Google Sign-Up",
-                tint = Color.Unspecified, // Keeps original icon colors
+                tint = Color.Unspecified,
                 modifier = Modifier.fillMaxSize()
             )
         }
 
         Spacer(modifier = Modifier.height(5.dp))
-
         errorMessage?.let { Text(text = it, color = Color.Red) }
         successMessage?.let { Text(text = it, color = Color.Green) }
     }
 }
 
-fun emailValidator(email: String) = android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
-fun passwordValidator(password: String) = Regex("^(?=.*[A-Z])(?=.*\\d)(?=.*[@#\$%^&+=!]).{8,}$").matches(password)
-fun dobValidator(dob: String): Boolean {
-    return try {
-        val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        val dobDate = sdf.parse(dob)
-        val calendar = Calendar.getInstance()
-        calendar.time = dobDate
-        val age = Calendar.getInstance().get(Calendar.YEAR) - calendar.get(Calendar.YEAR)
-        age >= 18
-    } catch (e: Exception) {
-        false
-    }
+// Opcjonalnie możesz dodać funkcję hashującą PIN, np. dla ChangePinActivity
+fun hashPin(pin: String): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    val hash = digest.digest(pin.toByteArray(Charsets.UTF_8))
+    return hash.joinToString("") { "%02x".format(it) }
 }

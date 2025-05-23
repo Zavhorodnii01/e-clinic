@@ -11,5 +11,6 @@ data class User(
     val gender: String = "",
     val name: String = "",
     val phone: String = "",
-    val surname: String = ""
+    val surname: String = "",
+    val pinCode: String? = null
 )

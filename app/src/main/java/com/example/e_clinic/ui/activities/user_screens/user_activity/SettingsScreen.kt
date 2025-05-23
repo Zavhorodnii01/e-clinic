@@ -1,5 +1,6 @@
 package com.example.e_clinic.ui.activities.user_screens.user_activity
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -29,6 +31,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.e_clinic.ui.activities.user_screens.ChangePinActivity
+import im.zego.connection.internal.ZegoConnectionImpl.context
 
 @Composable
 fun SettingsScreen(onClose: () -> Unit) {
@@ -55,6 +59,17 @@ fun SettingsScreen(onClose: () -> Unit) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                         Text(text = "Settings", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(16.dp))
                     }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 🔁 Change PIN Button
+                Button(
+                    onClick = {
+                        context.startActivity(Intent(context, ChangePinActivity::class.java))
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Change PIN")
                 }
             }
         }
