@@ -17,62 +17,31 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color // Correct Color import
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_clinic.R
-//import com.example.e_clinic.R
-import com.example.e_clinic.ui.activities.doctor_screens.DoctorLogInActivity
+import com.example.e_clinic.ui.activities.user_screens.user_activity.UserActivity
 import com.example.e_clinic.ui.theme.EClinicTheme
+import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.delay
-
-
 
 class UserLogInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,45 +49,18 @@ class UserLogInActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             EClinicTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
                 LogInScreen(
                     onSignUpClick = {
-                        val intent = Intent(this, UserSignUpActivity::class.java)
-                        startActivity(intent)
+                        startActivity(Intent(this, UserSignUpActivity::class.java))
                     },
                     onSignInSuccess = {
-                        val intent = Intent(this, UserActivity::class.java)
-                        startActivity(intent)
+                        startActivity(Intent(this, UserActivity::class.java))
                     }
                 )
-
             }
         }
     }
 }
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-/*@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    EClinicTheme {
-        Greeting("Android")
-    }
-}*/
-
-
 
 @Composable
 fun LogInScreen(
@@ -135,7 +77,7 @@ fun LogInScreen(
             FirebaseAuth.getInstance().signInWithCredential(authCredential)
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        onSignInSuccess()  // Trigger successful sign-in action
+                        onSignInSuccess()
                     } else {
                         Toast.makeText(context, "Google Sign-In Failed", Toast.LENGTH_SHORT).show()
                     }
@@ -162,15 +104,12 @@ fun LogInScreen(
             modifier = Modifier.padding(12.dp)
         )
 
-        // Email and Password fields
         TextField(
             value = email,
             onValueChange = { email = it },
             label = { Text("Email") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
         )
 
         TextField(
@@ -179,9 +118,7 @@ fun LogInScreen(
             label = { Text("Password") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -191,7 +128,13 @@ fun LogInScreen(
                 FirebaseAuth.getInstance().signInWithEmailAndPassword(email, password)
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
-                            onSignInSuccess()  // Trigger successful sign-in action
+                            val user = FirebaseAuth.getInstance().currentUser
+                            if (user != null && user.isEmailVerified) {
+                                onSignInSuccess()
+                            } else {
+                                FirebaseAuth.getInstance().signOut()
+                                errorMessage = "Email is not verified. Please check your inbox."
+                            }
                         } else {
                             errorMessage = "Incorrect email or password"
                         }
@@ -238,7 +181,6 @@ fun LogInScreen(
 
         IconButton(
             onClick = {
-                // Sign out first to force the account selection prompt
                 val googleSignInClient = GoogleSignIn.getClient(
                     context,
                     GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -248,7 +190,7 @@ fun LogInScreen(
                 )
 
                 GoogleSignIn.getLastSignedInAccount(context)?.let {
-                    googleSignInClient.signOut()  // Explicit sign-out before sign-in prompt
+                    googleSignInClient.signOut()
                 }
 
                 val signInIntent = googleSignInClient.signInIntent
@@ -258,19 +200,16 @@ fun LogInScreen(
                 )
                 launcher.launch(IntentSenderRequest.Builder(pendingIntent.intentSender).build())
             },
-            modifier = Modifier.size(200.dp) // Adjust size to fit your icon
+            modifier = Modifier.size(200.dp)
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.google_sign_in), // Your icon with text
+                painter = painterResource(id = R.drawable.google_sign_in),
                 contentDescription = "Google Sign-In",
-                tint = Color.Unspecified, // Keeps original icon colors
-                modifier = Modifier.fillMaxSize() // Makes the icon fill the button
+                tint = Color.Unspecified,
+                modifier = Modifier.fillMaxSize()
             )
         }
 
-
-
-        // Display error or success messages
         AnimatedVisibility(
             visible = errorMessage != null || successMessage != null,
             enter = fadeIn(animationSpec = tween(500)) + slideInVertically(initialOffsetY = { it / 2 }),
@@ -304,16 +243,5 @@ fun LogInScreen(
                 }
             }
         }
-    }
-}
-
-@Composable
-@Preview
-fun LogInScreenPreview() {
-    EClinicTheme {
-        LogInScreen(
-            onSignUpClick = {},
-            onSignInSuccess = {}
-        )
     }
 }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools" >
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:name=".ui.activities.MyApplication"
@@ -12,13 +12,38 @@
         android:roundIcon="@drawable/ic_launcher_foreground"
         android:supportsRtl="true"
         android:theme="@style/Theme.Eclinic"
-        tools:targetApi="31" >
+        tools:targetApi="31">
+
+        <!-- Remove the MainActivity entry if not used -->
+        <!-- <activity
+            android:name=".ZEGOCloud.MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AppCompat.Light.DarkActionBar"/> -->
+
         <activity
-            android:name=".ui.activities.user_screens.AppointmentActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.activities.logIn_screen.LogInActivity"
+            android:name=".ZEGOCloud.ConversationActivity"
             android:exported="true" />
+        <activity
+            android:name="com.example.e_clinic.ui.activities.user_screens.ChangePinActivity"
+            android:exported="true" />
+        <activity
+            android:name="com.example.e_clinic.ui.activities.user_screens.PinEntryActivity"
+            android:exported="true" />
+        <activity
+            android:name=".ZEGOCloud.LogActivity"
+            android:exported="true" />
+
+        <activity
+            android:name=".ui.activities.user_screens.UserLogInActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Eclinic">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".ui.activities.user_screens.UserSignUpActivity"
             android:exported="true" />
@@ -32,22 +57,16 @@
             android:name=".ui.activities.admin_screens.AdminLogInActivity"
             android:exported="true" />
         <activity
-            android:name=".ui.activities.user_screens.UserActivity"
+            android:name=".ui.activities.user_screens.user_activity.UserActivity"
             android:exported="true" />
         <activity
             android:name=".ui.activities.doctor_screens.DoctorLogInActivity"
             android:exported="true" />
         <activity
-            android:name=".ui.activities.user_screens.UserLogInActivity"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.Eclinic" >
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+            android:name=".ui.activities.doctor_screens.PrescribeActivity" />
+        <activity
+            android:name=".ui.activities.user_screens.PrescriptionListActivity" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
     </application>
 
 </manifest>

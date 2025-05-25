@@ -1,9 +1,23 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.gms.google-services")  // At the VERY BOTTOM of the file
+    id("com.google.gms.google-services") // At the VERY BOTTOM of the file
 }
+
+// Load API keys from local.properties
+val localProperties = Properties().apply {
+    val localPropsFile = rootProject.file("local.properties")
+    if (localPropsFile.exists()) {
+        load(localPropsFile.inputStream())  // Correct method for loading properties
+    }
+}
+
+// Read the keys from local.properties
+val appID = localProperties["APP_ID"]
+val appSign = localProperties["APP_SIGN"]
 
 android {
     namespace = "com.example.e_clinic"
@@ -11,12 +25,23 @@ android {
 
     defaultConfig {
         applicationId = "com.example.e_clinic"
-        minSdk = 26 // Исправлено
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Inject API keys into BuildConfig
+        buildConfigField("String", "APP_ID", "\"$appID\"")
+        buildConfigField("String", "APP_SIGN", "\"$appSign\"")
+    }
+
+    // Enable the BuildConfig feature
+    buildFeatures {
+        buildConfig = true // Add this line to enable BuildConfig feature
+        compose = true
+        dataBinding = true
     }
 
     buildTypes {
@@ -28,18 +53,16 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
     }
-    buildFeatures {
-        compose = true
-    }
 }
-
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -51,10 +74,11 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation("com.google.android.gms:play-services-auth:21.3.0")
 
-    // Firebase SDKs
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.storage.ktx)
+    implementation("com.github.ZEGOCLOUD:zego_inapp_chat_uikit_android:+")
+
 
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -71,31 +95,17 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-
-
-    // Import the BoM for the Firebase platform
     implementation(platform("com.google.firebase:firebase-bom:33.11.0"))
     implementation("com.google.firebase:firebase-analytics")
-
-
-    // Add the dependency for the Firebase Authentication library
-    // When using the BoM, you don't specify versions in Firebase library dependencies
     implementation("com.google.firebase:firebase-auth")
 
-    // Also add the dependencies for the Credential Manager libraries and specify their versions
     implementation("androidx.credentials:credentials:1.3.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
 
-    implementation ("com.google.firebase:firebase-auth-ktx")
-    implementation ("com.google.android.gms:play-services-auth:20.7.0")
-
-
+    implementation("com.github.ZEGOCLOUD:zego_inapp_chat_uikit_android:+")
 }
 
-/*buildscript {
-    dependencies {
-        classpath("com.google.gms:google-services:4.4.2") // Добавлено сюда
-    }
-}*/

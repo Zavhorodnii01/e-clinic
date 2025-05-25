@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.ArrowForward
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -41,6 +43,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -67,7 +70,10 @@ import androidx.navigation.compose.composable
 import com.example.e_clinic.ui.theme.EClinicTheme
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.e_clinic.Firebase.collections.Prescription
+import com.example.e_clinic.Firebase.storage.uploadPrescriptionToStorage
 import com.example.e_clinic.services.functions.appServices
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.CoroutineScope
 
@@ -260,18 +266,60 @@ fun ServiceListItem(
 
 @Composable
 fun DocumentsScreen() {
-    //TODO: Implement Documents Screen UI with Firebase operations
     val scrollState = rememberScrollState()
+    var userId by remember { mutableStateOf("") }
+    var medication by remember { mutableStateOf("") }
+    var doctorComment by remember { mutableStateOf("") }
 
-    Column {
+    Column(modifier = Modifier.verticalScroll(scrollState)) {
         Text(
             text = "Your Documents",
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.padding(16.dp)
         )
-    }
 
+        OutlinedTextField(
+            value = userId,
+            onValueChange = { userId = it },
+            label = { Text("Enter User ID") },
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = medication,
+            onValueChange = { medication = it },
+            label = { Text("Enter Medication") },
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = doctorComment,
+            onValueChange = { doctorComment = it },
+            label = { Text("Write Comment") },
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+        )
+
+        Button(
+            onClick = {
+                val doctorId = FirebaseAuth.getInstance().currentUser?.uid
+                val prescription = Prescription(doctor_id=doctorId.toString(), user_id=userId,issued_date= Timestamp.now(), link_to_storage="link", appointment_id = "appointmentid" , doctor_comment = doctorComment)
+                addPrescription(prescription, medication)
+                      },
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text("Load Document")
+        }
+    }
 }
+
+fun addPrescription(prescription: Prescription, medication : String) {
+    uploadPrescriptionToStorage(prescription, medication)
+}
+
 
 @Composable
 fun HomeScreen() {
