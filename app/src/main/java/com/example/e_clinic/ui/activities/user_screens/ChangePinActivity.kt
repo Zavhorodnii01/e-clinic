@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import java.security.MessageDigest
 
@@ -82,7 +83,10 @@ fun ChangePinScreen() {
 
                     if (userId != null) {
                         db.collection("users").document(userId)
-                            .update("pinCode", hashedPin)
+                            .update(mapOf(
+                                "pinCode" to hashedPin,
+                                "hasSetPin" to true
+                            ))
                             .addOnSuccessListener {
                                 message = "PIN changed successfully"
                                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -99,6 +103,27 @@ fun ChangePinScreen() {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Save PIN")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedButton(
+            onClick = {
+                val userId = auth.currentUser?.uid
+                if (userId != null) {
+                    db.collection("users").document(userId)
+                        .update("pinCode", FieldValue.delete())
+                        .addOnSuccessListener {
+                            Toast.makeText(context, "Skipped setting PIN", Toast.LENGTH_SHORT).show()
+                        }
+                        .addOnFailureListener {
+                            Toast.makeText(context, "Error: ${it.message}", Toast.LENGTH_SHORT).show()
+                        }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Not now")
         }
 
         if (message.isNotEmpty()) {

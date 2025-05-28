@@ -4,18 +4,17 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.gms.google-services") // At the VERY BOTTOM of the file
+    id("com.google.gms.google-services") // Na końcu, jak zaleca Google
 }
 
-// Load API keys from local.properties
+// Wczytaj dane z local.properties
 val localProperties = Properties().apply {
     val localPropsFile = rootProject.file("local.properties")
     if (localPropsFile.exists()) {
-        load(localPropsFile.inputStream())  // Correct method for loading properties
+        load(localPropsFile.inputStream())
     }
 }
 
-// Read the keys from local.properties
 val appID = localProperties["APP_ID"]
 val appSign = localProperties["APP_SIGN"]
 
@@ -32,16 +31,19 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Inject API keys into BuildConfig
+        // Wstrzyknięcie kluczy do BuildConfig
         buildConfigField("String", "APP_ID", "\"$appID\"")
         buildConfigField("String", "APP_SIGN", "\"$appSign\"")
     }
 
-    // Enable the BuildConfig feature
     buildFeatures {
-        buildConfig = true // Add this line to enable BuildConfig feature
         compose = true
+        buildConfig = true
         dataBinding = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.3"
     }
 
     buildTypes {
@@ -63,7 +65,9 @@ android {
         jvmTarget = "11"
     }
 }
+
 dependencies {
+    // AndroidX + Compose
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -72,21 +76,43 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation("com.google.android.gms:play-services-auth:21.3.0")
 
-    implementation(libs.firebase.auth.ktx)
-    implementation(libs.firebase.firestore.ktx)
-    implementation(libs.firebase.storage.ktx)
-    implementation("com.github.ZEGOCLOUD:zego_inapp_chat_uikit_android:+")
+    // Navigation
+    implementation(libs.androidx.navigation.runtime.android)
+    implementation(libs.androidx.navigation.compose)
 
-
+    // UI + Layout
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
-    implementation(libs.androidx.navigation.runtime.android)
-    implementation(libs.androidx.navigation.compose)
 
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:33.11.0")) // najnowsza na 2025
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-storage-ktx")
+    implementation("com.google.firebase:firebase-analytics")
+
+    // Google Sign-In
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
+
+    // Credentials API
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+
+    // ZEGOCLOUD In-App Chat
+    implementation("com.github.ZEGOCLOUD:zego_inapp_chat_uikit_android:+")
+
+    // Accompanist (Zaktualizowana wersja)
+    implementation("com.google.accompanist:accompanist-pager:0.33.2-alpha")
+    implementation("com.google.accompanist:accompanist-pager-indicators:0.33.2-alpha")
+
+    // DateTime Dialogs
+    implementation("io.github.vanpra.compose-material-dialogs:datetime:0.9.0")
+
+    // Testy
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -94,18 +120,4 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-
-    implementation(platform("com.google.firebase:firebase-bom:33.11.0"))
-    implementation("com.google.firebase:firebase-analytics")
-    implementation("com.google.firebase:firebase-auth")
-
-    implementation("androidx.credentials:credentials:1.3.0")
-    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
-    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
-
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.android.gms:play-services-auth:20.7.0")
-
-    implementation("com.github.ZEGOCLOUD:zego_inapp_chat_uikit_android:+")
 }
-

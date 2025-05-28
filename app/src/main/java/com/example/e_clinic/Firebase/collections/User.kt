@@ -12,5 +12,6 @@ data class User(
     val name: String = "",
     val phone: String = "",
     val surname: String = "",
-    val pinCode: String? = null
+    val pinCode: String? = null,
+    val hasSetPin: Boolean = false // Dodane pole do śledzenia, czy użytkownik ustawił PIN
 )

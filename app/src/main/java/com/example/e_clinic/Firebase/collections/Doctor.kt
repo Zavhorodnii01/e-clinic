@@ -6,7 +6,7 @@ import com.google.firebase.firestore.DocumentId
 
 data class Doctor(
     @DocumentId
-    val id: String = "",
+    var id: String = "",
     val address: String = "",
     val dob: Timestamp? = null,
     val e_mail: String = "",
@@ -16,5 +16,6 @@ data class Doctor(
     val name: String = "",
     val phone: String = "",
     val specialization: String = "",
-    val surname: String = ""
+    val surname: String = "",
+    val temp_password: String = "" // Dodane pole
 )

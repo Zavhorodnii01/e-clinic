@@ -11,12 +11,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -37,11 +33,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_clinic.R
 import com.example.e_clinic.ui.activities.user_screens.user_activity.UserActivity
+import com.example.e_clinic.ui.activities.user_screens.PinEntryActivity
 import com.example.e_clinic.ui.theme.EClinicTheme
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.firestore.FirebaseFirestore
 
 class UserLogInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,9 +50,6 @@ class UserLogInActivity : ComponentActivity() {
                 LogInScreen(
                     onSignUpClick = {
                         startActivity(Intent(this, UserSignUpActivity::class.java))
-                    },
-                    onSignInSuccess = {
-                        startActivity(Intent(this, UserActivity::class.java))
                     }
                 )
             }
@@ -64,8 +59,7 @@ class UserLogInActivity : ComponentActivity() {
 
 @Composable
 fun LogInScreen(
-    onSignUpClick: () -> Unit,
-    onSignInSuccess: () -> Unit
+    onSignUpClick: () -> Unit
 ) {
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
@@ -77,7 +71,21 @@ fun LogInScreen(
             FirebaseAuth.getInstance().signInWithCredential(authCredential)
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        onSignInSuccess()
+                        val user = FirebaseAuth.getInstance().currentUser
+                        if (user != null) {
+                            FirebaseFirestore.getInstance().collection("users").document(user.uid).get()
+                                .addOnSuccessListener { doc ->
+                                    val intent = if (doc.getBoolean("hasSetPin") == true) {
+                                        Intent(context, PinEntryActivity::class.java)
+                                    } else {
+                                        Intent(context, UserActivity::class.java)
+                                    }
+                                    context.startActivity(intent)
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(context, "Błąd pobierania danych użytkownika", Toast.LENGTH_SHORT).show()
+                                }
+                        }
                     } else {
                         Toast.makeText(context, "Google Sign-In Failed", Toast.LENGTH_SHORT).show()
                     }
@@ -109,7 +117,9 @@ fun LogInScreen(
             onValueChange = { email = it },
             label = { Text("Email") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
         )
 
         TextField(
@@ -118,7 +128,9 @@ fun LogInScreen(
             label = { Text("Password") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -128,9 +140,23 @@ fun LogInScreen(
                 FirebaseAuth.getInstance().signInWithEmailAndPassword(email, password)
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
-                            val user = FirebaseAuth.getInstance().currentUser
+                            val user = task.result.user
                             if (user != null && user.isEmailVerified) {
-                                onSignInSuccess()
+                                FirebaseFirestore.getInstance()
+                                    .collection("users")
+                                    .document(user.uid)
+                                    .get()
+                                    .addOnSuccessListener { doc ->
+                                        val intent = if (doc.getBoolean("hasSetPin") == true) {
+                                            Intent(context, PinEntryActivity::class.java)
+                                        } else {
+                                            Intent(context, UserActivity::class.java)
+                                        }
+                                        context.startActivity(intent)
+                                    }
+                                    .addOnFailureListener {
+                                        errorMessage = "Failed to fetch user data"
+                                    }
                             } else {
                                 FirebaseAuth.getInstance().signOut()
                                 errorMessage = "Email is not verified. Please check your inbox."

@@ -32,7 +32,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import java.security.MessageDigest
-import java.text.SimpleDateFormat
 import java.util.*
 
 class UserSignUpActivity : ComponentActivity() {
@@ -68,6 +67,9 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
     val calendar = remember { Calendar.getInstance() }
     val genderOptions = listOf("Male", "Female")
     var expanded by remember { mutableStateOf(false) }
+
+    var showPinDialog by remember { mutableStateOf(false) }
+    var tempUserId by remember { mutableStateOf<String?>(null) }
 
     val datePickerDialog = DatePickerDialog(
         context,
@@ -107,11 +109,12 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
                                                     phone = "",
                                                     dob = "",
                                                     gender = "",
-                                                    address = ""
+                                                    address = "",
+                                                    hasSetPin = false
                                                 )
                                                 userRef.set(newUser).addOnSuccessListener {
-                                                    successMessage = "Google Sign-Up Successful!"
-                                                    onSignUpSuccess()
+                                                    tempUserId = userId
+                                                    showPinDialog = true
                                                 }.addOnFailureListener {
                                                     errorMessage = "Firestore error: ${it.message}"
                                                 }
@@ -143,8 +146,7 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
                 .build()
         )
 
-        googleSignInClient.signOut() // Force account chooser
-
+        googleSignInClient.signOut()
         val signInIntent = googleSignInClient.signInIntent
         val pendingIntent = PendingIntent.getActivity(context, 0, signInIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
         googleSignUpLauncher.launch(IntentSenderRequest.Builder(pendingIntent.intentSender).build())
@@ -168,7 +170,6 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
 
                     val userId = firebaseUser?.uid ?: return@addOnCompleteListener
 
-
                     val user = User(
                         id = userId,
                         email = email.trim(),
@@ -177,12 +178,13 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
                         phone = phone,
                         dob = dob,
                         gender = selectedGender,
-                        address = address
+                        address = address,
+                        hasSetPin = false
                     )
                     db.collection("users").document(userId).set(user)
                         .addOnSuccessListener {
-                            successMessage = "Registration successful! Please verify your email."
-                            onSignUpSuccess()
+                            tempUserId = userId
+                            showPinDialog = true
                         }
                         .addOnFailureListener { exception ->
                             errorMessage = "Error registering user: ${exception.message}"
@@ -217,12 +219,8 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
             color = if (dob == "Select Date of Birth") Color.Gray else Color.Black
         )
         Spacer(modifier = Modifier.height(16.dp))
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            genderOptions.forEach { gender ->
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.fillMaxWidth()) {
+            listOf("Male", "Female").forEach { gender ->
                 DropdownMenuItem(
                     text = { Text(gender) },
                     onClick = {
@@ -242,7 +240,10 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        Button(onClick = { registerUser() }, modifier = Modifier.fillMaxWidth()) { Text("Register") }
+        Button(onClick = { registerUser() }, modifier = Modifier.fillMaxWidth()) {
+            Text("Register")
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         IconButton(
@@ -260,10 +261,71 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
         Spacer(modifier = Modifier.height(5.dp))
         errorMessage?.let { Text(text = it, color = Color.Red) }
         successMessage?.let { Text(text = it, color = Color.Green) }
+
+        if (showPinDialog) {
+            SetPinDialog(
+                onPinSet = { pin ->
+                    val hashedPin = pin?.let { hashPin(it) }
+                    tempUserId?.let { uid ->
+                        val updates = hashMapOf(
+                            "pinCode" to hashedPin,
+                            "hasSetPin" to true
+                        )
+                        db.collection("users").document(uid)
+                            .update(updates as Map<String, Any>)
+                            .addOnSuccessListener {
+                                showPinDialog = false
+                                onSignUpSuccess()
+                            }
+                            .addOnFailureListener {
+                                errorMessage = "Error saving PIN: ${it.message}"
+                            }
+                    }
+                },
+                onSkip = {
+                    tempUserId?.let { uid ->
+                        db.collection("users").document(uid)
+                            .update("hasSetPin", false)
+                        showPinDialog = false
+                        onSignUpSuccess()
+                    }
+                }
+            )
+        }
     }
 }
 
-// Opcjonalnie możesz dodać funkcję hashującą PIN, np. dla ChangePinActivity
+@Composable
+fun SetPinDialog(onPinSet: (String?) -> Unit, onSkip: () -> Unit) {
+    var pin by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = { onSkip() },
+        title = { Text("Set 4-digit PIN") },
+        text = {
+            OutlinedTextField(
+                value = pin,
+                onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pin = it },
+                label = { Text("Enter PIN") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                visualTransformation = PasswordVisualTransformation()
+            )
+        },
+        confirmButton = {
+            Button(onClick = {
+                if (pin.length == 4) onPinSet(pin)
+            }) {
+                Text("Set PIN")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onSkip) {
+                Text("Skip")
+            }
+        }
+    )
+}
+
 fun hashPin(pin: String): String {
     val digest = MessageDigest.getInstance("SHA-256")
     val hash = digest.digest(pin.toByteArray(Charsets.UTF_8))
