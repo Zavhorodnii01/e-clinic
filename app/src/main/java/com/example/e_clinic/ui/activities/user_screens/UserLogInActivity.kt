@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.example.e_clinic.R
 import com.example.e_clinic.ui.activities.user_screens.user_activity.UserActivity
 import com.example.e_clinic.ui.activities.user_screens.PinEntryActivity
+import com.example.e_clinic.ui.activities.user_screens.SetPinAfterLoginActivity
 import com.example.e_clinic.ui.theme.EClinicTheme
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -47,11 +48,17 @@ class UserLogInActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             EClinicTheme {
-                LogInScreen(
-                    onSignUpClick = {
-                        startActivity(Intent(this, UserSignUpActivity::class.java))
-                    }
-                )
+                if (FirebaseAuth.getInstance().currentUser != null) {
+                    val intent = Intent(this, PinEntryActivity::class.java)
+                    startActivity(intent)
+                    finish()
+                } else {
+                    LogInScreen(
+                        onSignUpClick = {
+                            startActivity(Intent(this, UserSignUpActivity::class.java))
+                        }
+                    )
+                }
             }
         }
     }
@@ -78,7 +85,7 @@ fun LogInScreen(
                                     val intent = if (doc.getBoolean("hasSetPin") == true) {
                                         Intent(context, PinEntryActivity::class.java)
                                     } else {
-                                        Intent(context, UserActivity::class.java)
+                                        Intent(context, SetPinAfterLoginActivity::class.java)
                                     }
                                     context.startActivity(intent)
                                 }
@@ -150,7 +157,7 @@ fun LogInScreen(
                                         val intent = if (doc.getBoolean("hasSetPin") == true) {
                                             Intent(context, PinEntryActivity::class.java)
                                         } else {
-                                            Intent(context, UserActivity::class.java)
+                                            Intent(context, SetPinAfterLoginActivity::class.java)
                                         }
                                         context.startActivity(intent)
                                     }

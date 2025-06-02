@@ -31,7 +31,6 @@ import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
-import java.security.MessageDigest
 import java.util.*
 
 class UserSignUpActivity : ComponentActivity() {
@@ -40,8 +39,8 @@ class UserSignUpActivity : ComponentActivity() {
         setContent {
             enableEdgeToEdge()
             RegistrationScreen(onSignUpSuccess = {
-                val intent = Intent(this, UserLogInActivity::class.java)
-                startActivity(intent)
+                startActivity(Intent(this, UserLogInActivity::class.java))
+                finish()
             })
         }
     }
@@ -65,11 +64,7 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
     val calendar = remember { Calendar.getInstance() }
-    val genderOptions = listOf("Male", "Female")
     var expanded by remember { mutableStateOf(false) }
-
-    var showPinDialog by remember { mutableStateOf(false) }
-    var tempUserId by remember { mutableStateOf<String?>(null) }
 
     val datePickerDialog = DatePickerDialog(
         context,
@@ -88,49 +83,45 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
                 val account = task.getResult(ApiException::class.java)
                 val email = account.email ?: return@rememberLauncherForActivityResult
 
-                FirebaseAuth.getInstance().fetchSignInMethodsForEmail(email)
-                    .addOnCompleteListener { task ->
-                        if (task.isSuccessful) {
-                            val signInMethods = task.result?.signInMethods
-                            val credential = GoogleAuthProvider.getCredential(account.idToken, null)
-                            FirebaseAuth.getInstance().signInWithCredential(credential)
-                                .addOnCompleteListener { authTask ->
-                                    if (authTask.isSuccessful) {
-                                        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return@addOnCompleteListener
-                                        val userRef = db.collection("users").document(userId)
+                auth.fetchSignInMethodsForEmail(email).addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+                        auth.signInWithCredential(credential).addOnCompleteListener { authTask ->
+                            if (authTask.isSuccessful) {
+                                val userId = auth.currentUser?.uid ?: return@addOnCompleteListener
+                                val userRef = db.collection("users").document(userId)
 
-                                        userRef.get().addOnSuccessListener { document ->
-                                            if (!document.exists()) {
-                                                val newUser = User(
-                                                    id = userId,
-                                                    email = email,
-                                                    name = account.displayName.orEmpty(),
-                                                    surname = "",
-                                                    phone = "",
-                                                    dob = "",
-                                                    gender = "",
-                                                    address = "",
-                                                    hasSetPin = false
-                                                )
-                                                userRef.set(newUser).addOnSuccessListener {
-                                                    tempUserId = userId
-                                                    showPinDialog = true
-                                                }.addOnFailureListener {
-                                                    errorMessage = "Firestore error: ${it.message}"
-                                                }
-                                            } else {
-                                                successMessage = "Welcome back!"
-                                                onSignUpSuccess()
-                                            }
+                                userRef.get().addOnSuccessListener { document ->
+                                    if (!document.exists()) {
+                                        val newUser = User(
+                                            id = userId,
+                                            email = email,
+                                            name = account.displayName.orEmpty(),
+                                            surname = "",
+                                            phone = "",
+                                            dob = "",
+                                            gender = "",
+                                            address = "",
+                                            hasSetPin = false
+                                        )
+                                        userRef.set(newUser).addOnSuccessListener {
+                                            onSignUpSuccess()
+                                        }.addOnFailureListener {
+                                            errorMessage = "Firestore error: ${it.message}"
                                         }
                                     } else {
-                                        errorMessage = "Google Sign-In Failed: ${authTask.exception?.message}"
+                                        successMessage = "Welcome back!"
+                                        onSignUpSuccess()
                                     }
                                 }
-                        } else {
-                            errorMessage = task.exception?.message ?: "Error checking email."
+                            } else {
+                                errorMessage = "Google Sign-In Failed: ${authTask.exception?.message}"
+                            }
                         }
+                    } else {
+                        errorMessage = task.exception?.message ?: "Error checking email."
                     }
+                }
             } catch (e: ApiException) {
                 errorMessage = "Google Sign-In Failed: ${e.message}"
             }
@@ -145,7 +136,6 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
                 .requestEmail()
                 .build()
         )
-
         googleSignInClient.signOut()
         val signInIntent = googleSignInClient.signInIntent
         val pendingIntent = PendingIntent.getActivity(context, 0, signInIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
@@ -181,13 +171,13 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
                         address = address,
                         hasSetPin = false
                     )
+
                     db.collection("users").document(userId).set(user)
                         .addOnSuccessListener {
-                            tempUserId = userId
-                            showPinDialog = true
+                            onSignUpSuccess()
                         }
-                        .addOnFailureListener { exception ->
-                            errorMessage = "Error registering user: ${exception.message}"
+                        .addOnFailureListener {
+                            errorMessage = "Error saving user: ${it.message}"
                         }
                 } else {
                     errorMessage = task.exception?.message ?: "Registration failed."
@@ -210,6 +200,7 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Address") }, modifier = Modifier.fillMaxWidth())
         Spacer(modifier = Modifier.height(8.dp))
+
         Text(
             text = dob,
             modifier = Modifier
@@ -218,7 +209,9 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
                 .padding(12.dp),
             color = if (dob == "Select Date of Birth") Color.Gray else Color.Black
         )
+
         Spacer(modifier = Modifier.height(16.dp))
+
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.fillMaxWidth()) {
             listOf("Male", "Female").forEach { gender ->
                 DropdownMenuItem(
@@ -230,14 +223,16 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
                 )
             }
         }
+
         Text(
             text = selectedGender,
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { expanded = true }
                 .padding(12.dp),
-            color = if (selectedGender == "Select Gender") Color.Gray else Color.Black
+            color = if (selectedGender.isEmpty()) Color.Gray else Color.Black
         )
+
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(onClick = { registerUser() }, modifier = Modifier.fillMaxWidth()) {
@@ -261,73 +256,5 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
         Spacer(modifier = Modifier.height(5.dp))
         errorMessage?.let { Text(text = it, color = Color.Red) }
         successMessage?.let { Text(text = it, color = Color.Green) }
-
-        if (showPinDialog) {
-            SetPinDialog(
-                onPinSet = { pin ->
-                    val hashedPin = pin?.let { hashPin(it) }
-                    tempUserId?.let { uid ->
-                        val updates = hashMapOf(
-                            "pinCode" to hashedPin,
-                            "hasSetPin" to true
-                        )
-                        db.collection("users").document(uid)
-                            .update(updates as Map<String, Any>)
-                            .addOnSuccessListener {
-                                showPinDialog = false
-                                onSignUpSuccess()
-                            }
-                            .addOnFailureListener {
-                                errorMessage = "Error saving PIN: ${it.message}"
-                            }
-                    }
-                },
-                onSkip = {
-                    tempUserId?.let { uid ->
-                        db.collection("users").document(uid)
-                            .update("hasSetPin", false)
-                        showPinDialog = false
-                        onSignUpSuccess()
-                    }
-                }
-            )
-        }
     }
-}
-
-@Composable
-fun SetPinDialog(onPinSet: (String?) -> Unit, onSkip: () -> Unit) {
-    var pin by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = { onSkip() },
-        title = { Text("Set 4-digit PIN") },
-        text = {
-            OutlinedTextField(
-                value = pin,
-                onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pin = it },
-                label = { Text("Enter PIN") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                visualTransformation = PasswordVisualTransformation()
-            )
-        },
-        confirmButton = {
-            Button(onClick = {
-                if (pin.length == 4) onPinSet(pin)
-            }) {
-                Text("Set PIN")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onSkip) {
-                Text("Skip")
-            }
-        }
-    )
-}
-
-fun hashPin(pin: String): String {
-    val digest = MessageDigest.getInstance("SHA-256")
-    val hash = digest.digest(pin.toByteArray(Charsets.UTF_8))
-    return hash.joinToString("") { "%02x".format(it) }
 }
