@@ -11,7 +11,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,6 +39,7 @@ import com.example.e_clinic.R
 import com.example.e_clinic.ui.activities.user_screens.user_activity.UserActivity
 import com.example.e_clinic.ui.activities.user_screens.PinEntryActivity
 import com.example.e_clinic.ui.activities.user_screens.SetPinAfterLoginActivity
+import com.example.e_clinic.ui.activities.user_screens.UserSignUpActivity
 import com.example.e_clinic.ui.theme.EClinicTheme
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -48,17 +53,15 @@ class UserLogInActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             EClinicTheme {
-                if (FirebaseAuth.getInstance().currentUser != null) {
-                    val intent = Intent(this, PinEntryActivity::class.java)
-                    startActivity(intent)
-                    finish()
-                } else {
-                    LogInScreen(
-                        onSignUpClick = {
-                            startActivity(Intent(this, UserSignUpActivity::class.java))
-                        }
-                    )
-                }
+                LogInScreen(
+                    onSignUpClick = {
+                        startActivity(Intent(this, UserSignUpActivity::class.java))
+                    },
+                    onContinueAsUser = {
+                        startActivity(Intent(this, PinEntryActivity::class.java))
+                        finish()
+                    }
+                )
             }
         }
     }
@@ -66,19 +69,23 @@ class UserLogInActivity : ComponentActivity() {
 
 @Composable
 fun LogInScreen(
-    onSignUpClick: () -> Unit
+    onSignUpClick: () -> Unit,
+    onContinueAsUser: () -> Unit
 ) {
     val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+    val currentUser = auth.currentUser
+
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val credential = GoogleSignIn.getSignedInAccountFromIntent(result.data)
             val account = credential.result
             val authCredential = GoogleAuthProvider.getCredential(account.idToken, null)
 
-            FirebaseAuth.getInstance().signInWithCredential(authCredential)
+            auth.signInWithCredential(authCredential)
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        val user = FirebaseAuth.getInstance().currentUser
+                        val user = auth.currentUser
                         if (user != null) {
                             FirebaseFirestore.getInstance().collection("users").document(user.uid).get()
                                 .addOnSuccessListener { doc ->
@@ -119,6 +126,35 @@ fun LogInScreen(
             modifier = Modifier.padding(12.dp)
         )
 
+        if (currentUser != null) {
+            Text("Zalogowano jako: ${currentUser.email}", fontSize = 14.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onContinueAsUser,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Kontynuuj jako ${currentUser.email}")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = {
+                    auth.signOut()
+                    GoogleSignIn.getClient(
+                        context,
+                        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                            .requestIdToken(context.getString(R.string.default_web_client_id))
+                            .requestEmail()
+                            .build()
+                    ).signOut()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Wyloguj")
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
         TextField(
             value = email,
             onValueChange = { email = it },
@@ -144,7 +180,7 @@ fun LogInScreen(
 
         Button(
             onClick = {
-                FirebaseAuth.getInstance().signInWithEmailAndPassword(email, password)
+                auth.signInWithEmailAndPassword(email, password)
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
                             val user = task.result.user
@@ -165,7 +201,7 @@ fun LogInScreen(
                                         errorMessage = "Failed to fetch user data"
                                     }
                             } else {
-                                FirebaseAuth.getInstance().signOut()
+                                auth.signOut()
                                 errorMessage = "Email is not verified. Please check your inbox."
                             }
                         } else {
@@ -187,12 +223,12 @@ fun LogInScreen(
             Text("Sign Up")
         }
 
-        Spacer(modifier = Modifier.padding(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Button(
             onClick = {
                 if (email.isNotBlank()) {
-                    FirebaseAuth.getInstance().sendPasswordResetEmail(email)
+                    auth.sendPasswordResetEmail(email)
                         .addOnCompleteListener { task ->
                             if (task.isSuccessful) {
                                 successMessage = "Password reset email sent to $email"
@@ -222,9 +258,7 @@ fun LogInScreen(
                         .build()
                 )
 
-                GoogleSignIn.getLastSignedInAccount(context)?.let {
-                    googleSignInClient.signOut()
-                }
+                googleSignInClient.signOut()
 
                 val signInIntent = googleSignInClient.signInIntent
                 val pendingIntent = PendingIntent.getActivity(

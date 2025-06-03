@@ -3,6 +3,7 @@ package com.example.e_clinic.ui.activities.user_screens
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -18,6 +19,7 @@ import com.example.e_clinic.services.functions.hashPin
 import com.example.e_clinic.ui.activities.user_screens.user_activity.UserActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 
 class SetPinAfterLoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,13 +29,13 @@ class SetPinAfterLoginActivity : ComponentActivity() {
         }
     }
 }
-
 @Composable
 fun SetPinAfterLoginScreen() {
     val context = LocalContext.current
     var newPin by remember { mutableStateOf("") }
     var confirmPin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) } // Dodajemy stan ładowania
 
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -87,24 +89,41 @@ fun SetPinAfterLoginScreen() {
                     confirmPin.length != 4 -> error = "Confirm your PIN"
                     newPin != confirmPin -> error = "PINs don't match"
                     else -> {
+                        isLoading = true
                         val hashedPin = hashPin(newPin)
-                        db.collection("users").document(userId!!)
-                            .update(
-                                "pinCode", hashedPin,
-                                "hasSetPin", true,
-                                "rememberDevice", true
-                            )
 
+                        // Używamy set() z merge zamiast update()
+                        val userData = hashMapOf(
+                            "pinCode" to hashedPin,
+                            "hasSetPin" to true,
+                            "rememberDevice" to true
+                        )
+
+                        db.collection("users").document(userId!!)
+                            .set(userData, SetOptions.merge())
                             .addOnSuccessListener {
-                                context.startActivity(Intent(context, UserActivity::class.java))
+                                isLoading = false
+                                // Przekierowanie do PinEntryActivity
+                                val intent = Intent(context, PinEntryActivity::class.java)
+                                context.startActivity(intent)
                                 (context as Activity).finish()
+                            }
+                            .addOnFailureListener { e ->
+                                isLoading = false
+                                error = "Error saving PIN: ${e.message}"
+                                Log.e("SetPin", "Error saving PIN", e)
                             }
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading // Blokuj przycisk podczas ładowania
         ) {
-            Text("Save PIN")
+            if (isLoading) {
+                CircularProgressIndicator(Modifier.size(20.dp))
+            } else {
+                Text("Save PIN")
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -112,11 +131,16 @@ fun SetPinAfterLoginScreen() {
         OutlinedButton(
             onClick = {
                 // Skip PIN setup
-                db.collection("users").document(userId!!)
-                    .update("hasSetPin", false, "rememberDevice", false)
+                val userData = hashMapOf(
+                    "hasSetPin" to false,
+                    "rememberDevice" to false
+                )
 
+                db.collection("users").document(userId!!)
+                    .set(userData, SetOptions.merge())
                     .addOnSuccessListener {
-                        context.startActivity(Intent(context, UserActivity::class.java))
+                        val intent = Intent(context, UserActivity::class.java)
+                        context.startActivity(intent)
                         (context as Activity).finish()
                     }
             },

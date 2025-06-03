@@ -574,3 +574,4 @@ fun generateTimeSlots(doctorId: String, date: LocalDate, ranges: List<List<Strin
         }
     }
 }
+//it needs to be registeted in the back end as an admin so it need to be set manually on computer
