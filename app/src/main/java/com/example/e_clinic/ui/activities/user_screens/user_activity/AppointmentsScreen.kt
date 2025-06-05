@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_clinic.Firebase.collections.Appointment
 import com.example.e_clinic.Firebase.collections.Doctor
+import com.example.e_clinic.Firebase.collections.specializations.DoctorSpecialization
 import com.example.e_clinic.Firebase.repositories.AppointmentRepository
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
@@ -58,21 +59,12 @@ fun AppointmentBookingForm(
     var datePickerState by remember { mutableStateOf(false) }
 
     // Fetch specializations
+// Load specializations from enum
     LaunchedEffect(Unit) {
-        isLoading = true
-        db.collection("doctors")
-            .get()
-            .addOnSuccessListener { result ->
-                specializations.clear()
-                result.documents.mapNotNull { it.getString("specialization") }
-                    .distinct()
-                    .forEach { specializations.add(it) }
-                isLoading = false
-            }
-            .addOnFailureListener {
-                isLoading = false
-                Toast.makeText(context, "Failed to load specializations", Toast.LENGTH_SHORT).show()
-            }
+        specializations.clear()
+        DoctorSpecialization.values().forEach { specialization ->
+            specializations.add(specialization.name) // UPPER_SNAKE_CASE
+        }
     }
 
     // Fetch doctors when specialization changes
@@ -183,8 +175,9 @@ fun AppointmentBookingForm(
                     }
                 )
                 specializations.forEach { specialization ->
+                    val enumValue = DoctorSpecialization.valueOf(specialization)
                     DropdownMenuItem(
-                        text = { Text(specialization) },
+                        text = { Text(enumValue.displayName) },
                         onClick = {
                             selectedSpecialization = specialization
                             specializationDropdownExpanded = false
