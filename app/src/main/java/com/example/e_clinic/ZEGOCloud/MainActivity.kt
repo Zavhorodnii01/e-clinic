@@ -32,10 +32,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initZegocloud() {
-        val appId = BuildConfig.APP_ID.toLong()
+        val appId = BuildConfig.APP_ID
         val appSign = BuildConfig.APP_SIGN
 
-        ZIMKit.initWith(application, appId, appSign)
+        ZIMKit.initWith(application, appId.toLong(), appSign)
         ZIMKit.initNotifications()
     }
 }

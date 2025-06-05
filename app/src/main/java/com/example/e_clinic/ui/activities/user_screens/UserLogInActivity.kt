@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_clinic.R
 import com.example.e_clinic.ui.activities.user_screens.user_activity.UserActivity
-import com.example.e_clinic.ui.activities.user_screens.PinEntryActivity
 import com.example.e_clinic.ui.theme.EClinicTheme
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions

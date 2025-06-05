@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <application
         android:name=".ui.activities.MyApplication"
         android:allowBackup="true"
@@ -24,13 +27,16 @@
             android:name=".ZEGOCloud.ConversationActivity"
             android:exported="true" />
         <activity
+            android:name=".ZEGOCloud.MainActivity"
+            android:exported="true" />
+        <activity
+            android:name=".ZEGOCloud.LogActivity"
+            android:exported="true" />
+        <activity
             android:name="com.example.e_clinic.ui.activities.user_screens.ChangePinActivity"
             android:exported="true" />
         <activity
             android:name="com.example.e_clinic.ui.activities.user_screens.PinEntryActivity"
-            android:exported="true" />
-        <activity
-            android:name=".ZEGOCloud.LogActivity"
             android:exported="true" />
 
         <activity

@@ -10,6 +10,8 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -28,6 +30,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.*
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppointmentBookingForm(
@@ -40,23 +43,70 @@ fun AppointmentBookingForm(
     // State management
     val doctors = remember { mutableStateListOf<Pair<String, String>>() }
     val availableTimeSlots = remember { mutableStateListOf<Timestamp>() }
+    val specializations = remember { mutableStateListOf<String>() }
 
+    var selectedSpecialization by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedDoctor by rememberSaveable { mutableStateOf<Pair<String, String>?>(null) }
     var selectedDate by rememberSaveable { mutableStateOf<Timestamp?>(null) }
     var selectedTimeSlot by rememberSaveable { mutableStateOf<Timestamp?>(null) }
-    var dropdownExpanded by rememberSaveable { mutableStateOf(false) }
-    var timeSlotDropdownExpanded by rememberSaveable { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
 
-    // Fetch doctors
+    var specializationDropdownExpanded by rememberSaveable { mutableStateOf(false) }
+    var doctorDropdownExpanded by rememberSaveable { mutableStateOf(false) }
+    var timeSlotDropdownExpanded by rememberSaveable { mutableStateOf(false) }
+
+    var isLoading by remember { mutableStateOf(false) }
+    var datePickerState by remember { mutableStateOf(false) }
+
+    // Fetch specializations
     LaunchedEffect(Unit) {
-        db.collection("doctors").get().addOnSuccessListener { result ->
-            doctors.clear()
-            result.documents.forEach { document ->
-                val name = "${document.getString("name")} ${document.getString("surname")}"
-                val specialization = document.getString("specialization") ?: "General"
-                doctors.add(document.id to "$name ($specialization)")
+        isLoading = true
+        db.collection("doctors")
+            .get()
+            .addOnSuccessListener { result ->
+                specializations.clear()
+                result.documents.mapNotNull { it.getString("specialization") }
+                    .distinct()
+                    .forEach { specializations.add(it) }
+                isLoading = false
             }
+            .addOnFailureListener {
+                isLoading = false
+                Toast.makeText(context, "Failed to load specializations", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    // Fetch doctors when specialization changes
+    LaunchedEffect(selectedSpecialization) {
+        if (selectedSpecialization != null) {
+            isLoading = true
+            db.collection("doctors")
+                .whereEqualTo("specialization", selectedSpecialization)
+                .get()
+                .addOnSuccessListener { result ->
+                    doctors.clear()
+                    result.documents.forEach { document ->
+                        val name = "${document.getString("name")} ${document.getString("surname")}"
+                        val specialization = document.getString("specialization") ?: "General"
+                        doctors.add(document.id to "$name ($specialization)")
+                    }
+                    isLoading = false
+                }
+                .addOnFailureListener {
+                    isLoading = false
+                    Toast.makeText(context, "Failed to load doctors", Toast.LENGTH_SHORT).show()
+                }
+        } else {
+            // Load all doctors if no specialization selected
+            db.collection("doctors")
+                .get()
+                .addOnSuccessListener { result ->
+                    doctors.clear()
+                    result.documents.forEach { document ->
+                        val name = "${document.getString("name")} ${document.getString("surname")}"
+                        val specialization = document.getString("specialization") ?: "General"
+                        doctors.add(document.id to "$name ($specialization)")
+                    }
+                }
         }
     }
 
@@ -102,34 +152,74 @@ fun AppointmentBookingForm(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .verticalScroll(rememberScrollState())
+            .padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Doctor selection dropdown
+        // Specialization selection
         ExposedDropdownMenuBox(
-            expanded = dropdownExpanded,
-            onExpandedChange = { dropdownExpanded = !dropdownExpanded }
+            expanded = specializationDropdownExpanded,
+            onExpandedChange = { specializationDropdownExpanded = !specializationDropdownExpanded }
         ) {
             TextField(
-                value = selectedDoctor?.second ?: "",
+                value = selectedSpecialization ?: "Select Specialization",
                 onValueChange = {},
                 readOnly = true,
-                label = { Text("Select Doctor") },
+                label = { Text("Specialization") },
                 modifier = Modifier.fillMaxWidth(),
                 trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded)
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = specializationDropdownExpanded)
                 }
             )
             ExposedDropdownMenu(
-                expanded = dropdownExpanded,
-                onDismissRequest = { dropdownExpanded = false }
+                expanded = specializationDropdownExpanded,
+                onDismissRequest = { specializationDropdownExpanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("All Specializations") },
+                    onClick = {
+                        selectedSpecialization = null
+                        specializationDropdownExpanded = false
+                    }
+                )
+                specializations.forEach { specialization ->
+                    DropdownMenuItem(
+                        text = { Text(specialization) },
+                        onClick = {
+                            selectedSpecialization = specialization
+                            specializationDropdownExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        // Doctor selection dropdown
+        ExposedDropdownMenuBox(
+            expanded = doctorDropdownExpanded,
+            onExpandedChange = { doctorDropdownExpanded = it && doctors.isNotEmpty() }
+        ) {
+            TextField(
+                value = selectedDoctor?.second ?: "Select Doctor",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Doctor") },
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = doctorDropdownExpanded)
+                },
+                enabled = doctors.isNotEmpty()
+            )
+            ExposedDropdownMenu(
+                expanded = doctorDropdownExpanded,
+                onDismissRequest = { doctorDropdownExpanded = false }
             ) {
                 doctors.forEach { (id, name) ->
                     DropdownMenuItem(
                         text = { Text(name) },
                         onClick = {
                             selectedDoctor = id to name
-                            dropdownExpanded = false
+                            doctorDropdownExpanded = false
                         }
                     )
                 }
@@ -138,39 +228,47 @@ fun AppointmentBookingForm(
 
         // Date selection
         Button(
-            onClick = {
-                val calendar = Calendar.getInstance()
-                DatePickerDialog(
-                    context,
-                    { _, year, month, dayOfMonth ->
-                        val selectedCalendar = Calendar.getInstance().apply {
-                            set(year, month, dayOfMonth)
-                            set(Calendar.HOUR_OF_DAY, 0)
-                            set(Calendar.MINUTE, 0)
-                            set(Calendar.SECOND, 0)
-                        }
-                        selectedDate = Timestamp(selectedCalendar.time)
-                    },
-                    calendar.get(Calendar.YEAR),
-                    calendar.get(Calendar.MONTH),
-                    calendar.get(Calendar.DAY_OF_MONTH)
-                ).show()
-            },
-            modifier = Modifier.fillMaxWidth()
+            onClick = { datePickerState = true },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = selectedDoctor != null
         ) {
             Text(selectedDate?.toDate()?.formatDate() ?: "Select Date")
         }
 
+        if (datePickerState) {
+            val calendar = Calendar.getInstance()
+            val datePicker = android.app.DatePickerDialog(
+                context,
+                { _, year, month, dayOfMonth ->
+                    val selectedCalendar = Calendar.getInstance().apply {
+                        set(year, month, dayOfMonth)
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                    }
+                    selectedDate = Timestamp(selectedCalendar.time)
+                    datePickerState = false
+                },
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+            )
+            datePicker.datePicker.minDate = calendar.timeInMillis
+            datePicker.show()
+        }
+
         // Time slot selection
         if (isLoading) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         } else {
             ExposedDropdownMenuBox(
                 expanded = timeSlotDropdownExpanded,
                 onExpandedChange = { timeSlotDropdownExpanded = it && availableTimeSlots.isNotEmpty() }
             ) {
                 TextField(
-                    value = selectedTimeSlot?.toDate()?.formatTime() ?: "",
+                    value = selectedTimeSlot?.toDate()?.formatTime() ?: "Select Time Slot",
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Available Time Slots") },
@@ -210,25 +308,10 @@ fun AppointmentBookingForm(
                         status = "NOT_FINISHED"
                     )
 
-                    // First book the appointment
                     AppointmentRepository().bookAppointment(appointment) { success ->
                         if (success) {
-                            // Then remove the time slot from availability
-                            db.collection("timeSlots")
-                                .whereEqualTo("doctor_id", doctorId)
-                                .whereArrayContains("available_slots", selectedTimeSlot!!)
-                                .get()
-                                .addOnSuccessListener { docs ->
-                                    docs.forEach { doc ->
-                                        val updatedSlots =
-                                            (doc.get("available_slots") as List<Timestamp>)
-                                                .minus(selectedTimeSlot!!)
-
-                                        doc.reference.update("available_slots", updatedSlots)
-                                    }
-                                    Toast.makeText(context, "Appointment booked!", Toast.LENGTH_SHORT).show()
-                                    onAppointmentBooked()
-                                }
+                            Toast.makeText(context, "Appointment booked!", Toast.LENGTH_SHORT).show()
+                            onAppointmentBooked()
                         } else {
                             Toast.makeText(context, "Failed to book appointment", Toast.LENGTH_SHORT).show()
                         }
@@ -245,12 +328,10 @@ fun AppointmentBookingForm(
     }
 }
 
+
 // Date formatting extensions
 fun Date.formatDate(): String = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(this)
 fun Date.formatTime(): String = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(this)
-
-
-
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -262,28 +343,17 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    val allAppointments = remember { mutableStateListOf<Appointment>() }
+    val upcomingAppointments = remember { mutableStateListOf<Appointment>() }
+    val pastAppointments = remember { mutableStateListOf<Appointment>() }
     val doctorsCache = remember { mutableMapOf<String, Doctor>() }
     var doctorsLoading by remember { mutableStateOf(false) }
 
     // Debugging state
     var debugInfo by remember { mutableStateOf("") }
-    val upcomingAppointments = remember{ mutableStateListOf<Appointment>()}
-   /* val upcomingAppointments = remember(allAppointments) {
-        allAppointments.filter { appointment ->
-            // Upcoming: NOT_FINISHED and date is in future (if date exists)
 
-                    (appointment.date?.toDate()?.after(Date()) ?: true)
-        }.sortedBy { it.date?.toDate() }
-    }*/
-
-
-    val pastAppointments = remember {  mutableStateListOf<Appointment>()}
-
+    // Fetch upcoming appointments
     LaunchedEffect(userId) {
         try {
-            debugInfo = "Starting data fetch..."
-
             FirebaseFirestore.getInstance()
                 .collection("appointments")
                 .whereEqualTo("user_id", userId)
@@ -292,53 +362,33 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
                     firebaseError?.let {
                         error = "Firestore error: ${it.message}"
                         isLoading = false
-                        debugInfo = "Error: ${it.message}"
                         return@addSnapshotListener
                     }
 
-                    if (snapshot == null) {
-                        error = "No data returned from Firestore"
-                        isLoading = false
-                        debugInfo = "Snapshot is null"
-                        return@addSnapshotListener
-                    }
-
-                    debugInfo = "Received ${snapshot.documents.size} documents"
-
-                    snapshot.documents.forEach { document ->
+                    snapshot?.documents?.forEach { document ->
                         document.toObject(Appointment::class.java)?.let { appointment ->
                             if (upcomingAppointments.none { it.id == appointment.id }) {
                                 upcomingAppointments.add(appointment)
                                 if (!doctorsCache.containsKey(appointment.doctor_id)) {
                                     doctorsLoading = true
                                     fetchDoctorInfo(appointment.doctor_id, doctorsCache) {
-                                        doctorsLoading = doctorsCache.size <
-                                                upcomingAppointments.distinctBy { it.doctor_id }.size
+                                        doctorsLoading = false
                                     }
                                 }
                             }
                         }
                     }
-
-                    if (upcomingAppointments.isNotEmpty()) {
-                        isLoading = false
-                        debugInfo = "Loaded ${upcomingAppointments.size} appointments"
-
-                    } else {
-                        debugInfo = "No appointments found for user $userId"
-                    }
+                    isLoading = false
                 }
         } catch (e: Exception) {
             error = "Exception: ${e.localizedMessage}"
             isLoading = false
-            debugInfo = "Caught exception: ${e.stackTraceToString()}"
         }
     }
 
+    // Fetch past appointments
     LaunchedEffect(userId) {
         try {
-            debugInfo = "Starting data fetch..."
-
             FirebaseFirestore.getInstance()
                 .collection("appointments")
                 .whereEqualTo("user_id", userId)
@@ -346,171 +396,145 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
                 .addSnapshotListener { snapshot, firebaseError ->
                     firebaseError?.let {
                         error = "Firestore error: ${it.message}"
-                        isLoading = false
-                        debugInfo = "Error: ${it.message}"
                         return@addSnapshotListener
                     }
 
-                    if (snapshot == null) {
-                        error = "No data returned from Firestore"
-                        isLoading = false
-                        debugInfo = "Snapshot is null"
-                        return@addSnapshotListener
-                    }
-
-                    debugInfo = "Received ${snapshot.documents.size} documents"
-
-                    snapshot.documents.forEach { document ->
+                    snapshot?.documents?.forEach { document ->
                         document.toObject(Appointment::class.java)?.let { appointment ->
                             if (pastAppointments.none { it.id == appointment.id }) {
                                 pastAppointments.add(appointment)
                                 if (!doctorsCache.containsKey(appointment.doctor_id)) {
                                     doctorsLoading = true
                                     fetchDoctorInfo(appointment.doctor_id, doctorsCache) {
-                                        doctorsLoading = doctorsCache.size <
-                                                pastAppointments.distinctBy { it.doctor_id }.size
+                                        doctorsLoading = false
                                     }
                                 }
                             }
                         }
                     }
-
-                    if (pastAppointments.isNotEmpty()) {
-                        isLoading = false
-                        debugInfo = "Loaded ${upcomingAppointments.size} appointments"
-
-                    } else {
-                        debugInfo = "No appointments found for user $userId"
-                    }
                 }
         } catch (e: Exception) {
             error = "Exception: ${e.localizedMessage}"
-            isLoading = false
-            debugInfo = "Caught exception: ${e.stackTraceToString()}"
         }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Debug info (remove in production)
+            if (debugInfo.isNotEmpty()) {
+                Text(
+                    text = debugInfo,
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
 
-
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Debug info (remove in production)
-        Text(
-            text = debugInfo,
-            color = Color.Gray,
-            fontSize = 12.sp,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        if (isLoading || doctorsLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator()
-                    if (doctorsLoading) {
-                        Text("Loading doctor information...", style = MaterialTheme.typography.bodySmall)
+            if (isLoading || doctorsLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        if (doctorsLoading) {
+                            Text("Loading doctor information...", style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                 }
-            }
-        } else if (error != null) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("Error loading appointments", color = MaterialTheme.colorScheme.error)
-                Text(error!!, style = MaterialTheme.typography.bodySmall)
-                Button(onClick = { isLoading = true }) {
-                    Text("Retry")
+            } else if (error != null) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Error loading appointments", color = MaterialTheme.colorScheme.error)
+                    Text(error!!, style = MaterialTheme.typography.bodySmall)
+                    Button(onClick = { isLoading = true; error = null }) {
+                        Text("Retry")
+                    }
+                }
+            } else {
+                // Tab selection
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    TabButton(
+                        text = "Upcoming (${upcomingAppointments.size})",
+                        isSelected = selectedTab == 0,
+                        onClick = { selectedTab = 0 }
+                    )
+                    TabButton(
+                        text = "Past (${pastAppointments.size})",
+                        isSelected = selectedTab == 1,
+                        onClick = { selectedTab = 1 }
+                    )
+                }
+
+                // Content
+                when (selectedTab) {
+                    0 -> AppointmentList(
+                        appointments = upcomingAppointments,
+                        doctorsCache = doctorsCache,
+                        emptyMessage = "No upcoming appointments",
+                        showCancel = true,
+                        onCancel = { showCancelDialog(context, it) }
+                    )
+                    1 -> AppointmentList(
+                        appointments = pastAppointments,
+                        doctorsCache = doctorsCache,
+                        emptyMessage = "No past appointments"
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // New Appointment Button
+                ExtendedFloatingActionButton(
+                    onClick = { showBookingForm = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) {
+                    Text("Make New Appointment")
                 }
             }
-        } else {
-            // Tab selection
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                TabButton(
-                    text = "Upcoming (${upcomingAppointments.size})",
-                    isSelected = selectedTab == 0,
-                    onClick = { selectedTab = 0 }
-                )
-                TabButton(
-                    text = "Past (${pastAppointments.size})",
-                    isSelected = selectedTab == 1,
-                    onClick = { selectedTab = 1 }
-                )
-            }
-
-            // Content
-            when (selectedTab) {
-                0 -> AppointmentList(
-                    appointments = upcomingAppointments,
-                    doctorsCache = doctorsCache,
-                    emptyMessage = "No upcoming appointments",
-                    showCancel = true,
-                    onCancel = { showCancelDialog(context, it) }
-                )
-                1 -> AppointmentList(
-                    appointments = pastAppointments,
-                    doctorsCache = doctorsCache,
-                    emptyMessage = "No past appointments"
-                )
-            }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(onClick = { showBookingForm = !showBookingForm }) {
-            Text(if (showBookingForm) "Hide Booking Form" else "Make New Appointment")
-        }
-
+        // Booking Dialog
         if (showBookingForm) {
-            AppointmentBookingForm(userId = userId) {
-                onAppointmentMade()
-                showBookingForm = false
-            }
+            AlertDialog(
+                onDismissRequest = { showBookingForm = false },
+                title = { Text("Book New Appointment") },
+                text = {
+                    AppointmentBookingForm(
+                        userId = userId,
+                        onAppointmentBooked = {
+                            onAppointmentMade()
+                            showBookingForm = false
+                        }
+                    )
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { showBookingForm = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
-
-        /*Button(
-            onClick = {
-                context.startActivity(Intent(context, UserActivity::class.java))
-                (context as? ComponentActivity)?.finish()
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Return")
-        }*/
     }
 }
 
-// Helper function for fetching doctor info
-private fun fetchDoctorInfo(
-    doctorId: String,
-    doctorsCache: MutableMap<String, Doctor>,
-    onComplete: () -> Unit = {}
-) {
-    FirebaseFirestore.getInstance()
-        .collection("doctors")
-        .document(doctorId)
-        .get()
-        .addOnSuccessListener { document ->
-            document.toObject(Doctor::class.java)?.let {
-                doctorsCache[doctorId] = it
-            }
-            onComplete()
-        }
-        .addOnFailureListener {
-            onComplete()
-        }
-}@Composable
+@Composable
 private fun AppointmentList(
     appointments: List<Appointment>,
     doctorsCache: Map<String, Doctor>,
@@ -519,9 +543,17 @@ private fun AppointmentList(
     onCancel: ((String) -> Unit)? = null
 ) {
     if (appointments.isEmpty()) {
-        Text(emptyMessage, style = MaterialTheme.typography.bodyMedium)
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(emptyMessage, style = MaterialTheme.typography.bodyMedium)
+        }
     } else {
-        LazyColumn {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             items(appointments) { appointment ->
                 AppointmentItem(
                     appointment = appointment,
@@ -546,9 +578,9 @@ private fun TabButton(
         onClick = onClick,
         colors = ButtonDefaults.buttonColors(
             containerColor = if (isSelected) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.surface,
+            else MaterialTheme.colorScheme.surfaceVariant,
             contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary
-            else MaterialTheme.colorScheme.onSurface
+            else MaterialTheme.colorScheme.onSurfaceVariant
         ),
         modifier = modifier
     ) {
@@ -621,7 +653,7 @@ fun AppointmentItem(
                         contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("Cancel")
+                    Text("Cancel Appointment")
                 }
             }
         }
@@ -630,7 +662,8 @@ fun AppointmentItem(
 
 private fun fetchDoctorInfo(
     doctorId: String,
-    doctorsCache: MutableMap<String, Doctor>
+    doctorsCache: MutableMap<String, Doctor>,
+    onComplete: () -> Unit = {}
 ) {
     FirebaseFirestore.getInstance()
         .collection("doctors")
@@ -640,6 +673,10 @@ private fun fetchDoctorInfo(
             document.toObject(Doctor::class.java)?.let {
                 doctorsCache[doctorId] = it
             }
+            onComplete()
+        }
+        .addOnFailureListener {
+            onComplete()
         }
 }
 
@@ -671,4 +708,20 @@ private fun cancelAppointment(appointmentId: String, context: Context) {
 @Composable
 fun AppointmentsScreenPreview() {
     AppointmentsScreen(userId = "test_user") {}
+}
+
+
+private fun fetchDoctorInfo(
+    doctorId: String,
+    doctorsCache: MutableMap<String, Doctor>
+) {
+    FirebaseFirestore.getInstance()
+        .collection("doctors")
+        .document(doctorId)
+        .get()
+        .addOnSuccessListener { document ->
+            document.toObject(Doctor::class.java)?.let {
+                doctorsCache[doctorId] = it
+            }
+        }
 }
