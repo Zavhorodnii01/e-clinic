@@ -4,13 +4,18 @@ import android.app.Application
 import com.google.firebase.FirebaseApp
 
 import com.example.e_clinic.BuildConfig
+import com.google.firebase.appcheck.FirebaseAppCheck
+import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.zegocloud.zimkit.services.ZIMKit
 
 class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         FirebaseApp.initializeApp(this)
-        initZegocloud()  // Initialize ZEGOCLOUD
+        FirebaseAppCheck.getInstance().installAppCheckProviderFactory(
+            DebugAppCheckProviderFactory.getInstance()
+        )
+//        initZegocloud()  // Initialize ZEGOCLOUD
     }
 
     private fun initZegocloud() {
