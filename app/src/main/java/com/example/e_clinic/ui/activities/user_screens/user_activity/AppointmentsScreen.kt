@@ -5,13 +5,18 @@ import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -24,10 +29,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_clinic.Firebase.collections.Appointment
 import com.example.e_clinic.Firebase.collections.Doctor
+import com.example.e_clinic.Firebase.collections.TimeSlot
 import com.example.e_clinic.Firebase.collections.specializations.DoctorSpecialization
 import com.example.e_clinic.Firebase.repositories.AppointmentRepository
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -41,14 +49,12 @@ fun AppointmentBookingForm(
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
 
-    // State management
+    val specializations = remember { mutableStateListOf<String>() }
     val doctors = remember { mutableStateListOf<Pair<String, String>>() }
     val availableTimeSlots = remember { mutableStateListOf<Timestamp>() }
-    val specializations = remember { mutableStateListOf<String>() }
 
     var selectedSpecialization by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedDoctor by rememberSaveable { mutableStateOf<Pair<String, String>?>(null) }
-    var selectedDate by rememberSaveable { mutableStateOf<Timestamp?>(null) }
     var selectedTimeSlot by rememberSaveable { mutableStateOf<Timestamp?>(null) }
 
     var specializationDropdownExpanded by rememberSaveable { mutableStateOf(false) }
@@ -56,30 +62,43 @@ fun AppointmentBookingForm(
     var timeSlotDropdownExpanded by rememberSaveable { mutableStateOf(false) }
 
     var isLoading by remember { mutableStateOf(false) }
-    var datePickerState by remember { mutableStateOf(false) }
 
-    // Fetch specializations
-// Load specializations from enum
+    // Load specializations
     LaunchedEffect(Unit) {
         specializations.clear()
         DoctorSpecialization.values().forEach { specialization ->
-            specializations.add(specialization.name) // UPPER_SNAKE_CASE
+            specializations.add(specialization.name)
         }
     }
 
-    // Fetch doctors when specialization changes
+    // Load doctors filtered by specialization from timeslots
     LaunchedEffect(selectedSpecialization) {
         if (selectedSpecialization != null) {
             isLoading = true
-            db.collection("doctors")
+            db.collection("timeslots")
                 .whereEqualTo("specialization", selectedSpecialization)
                 .get()
                 .addOnSuccessListener { result ->
+                    val doctorIds = result.documents.mapNotNull { it.getString("doctor_id") }.distinct()
                     doctors.clear()
-                    result.documents.forEach { document ->
-                        val name = "${document.getString("name")} ${document.getString("surname")}"
-                        val specialization = document.getString("specialization") ?: "General"
-                        doctors.add(document.id to "$name ($specialization)")
+                    availableTimeSlots.clear()
+                    selectedDoctor = null
+                    selectedTimeSlot = null
+
+                    if (doctorIds.isNotEmpty()) {
+                        db.collection("doctors")
+                            .whereIn(FieldPath.documentId(), doctorIds)
+                            .get()
+                            .addOnSuccessListener { docs ->
+                                doctors.addAll(docs.map {
+                                    val name = "${it.getString("name")} ${it.getString("surname")}"
+                                    val specialization = it.getString("specialization") ?: "General"
+                                    it.id to "$name ($specialization)"
+                                })
+                            }
+                            .addOnFailureListener {
+                                Toast.makeText(context, "Failed to load doctors details", Toast.LENGTH_SHORT).show()
+                            }
                     }
                     isLoading = false
                 }
@@ -88,50 +107,31 @@ fun AppointmentBookingForm(
                     Toast.makeText(context, "Failed to load doctors", Toast.LENGTH_SHORT).show()
                 }
         } else {
-            // Load all doctors if no specialization selected
-            db.collection("doctors")
-                .get()
-                .addOnSuccessListener { result ->
-                    doctors.clear()
-                    result.documents.forEach { document ->
-                        val name = "${document.getString("name")} ${document.getString("surname")}"
-                        val specialization = document.getString("specialization") ?: "General"
-                        doctors.add(document.id to "$name ($specialization)")
-                    }
-                }
+            doctors.clear()
+            selectedDoctor = null
+            availableTimeSlots.clear()
+            selectedTimeSlot = null
         }
     }
 
-    // Fetch available time slots when doctor or date changes
-    LaunchedEffect(selectedDoctor, selectedDate) {
+    // Load available time slots for selected doctor
+    LaunchedEffect(selectedDoctor) {
         selectedTimeSlot = null
         availableTimeSlots.clear()
 
-        if (selectedDoctor != null && selectedDate != null) {
+        if (selectedDoctor != null) {
             isLoading = true
-            val (doctorId, _) = selectedDoctor!!
+            val doctorId = selectedDoctor!!.first
 
-            // Calculate start and end of selected day
-            val calendar = Calendar.getInstance().apply {
-                time = selectedDate!!.toDate()
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-            }
-            val startOfDay = Timestamp(calendar.time)
-            calendar.add(Calendar.DAY_OF_MONTH, 1)
-            val endOfDay = Timestamp(calendar.time)
-
-            db.collection("timeSlots")
+            db.collection("timeslots")
                 .whereEqualTo("doctor_id", doctorId)
-                .whereGreaterThanOrEqualTo("date", startOfDay)
-                .whereLessThan("date", endOfDay)
                 .get()
                 .addOnSuccessListener { result ->
-                    result.documents.forEach { doc ->
-                        val slots = doc.get("available_slots") as? List<Timestamp> ?: emptyList()
-                        availableTimeSlots.addAll(slots.sortedBy { it.seconds })
-                    }
+                    val timeSlots = result.toObjects(TimeSlot::class.java)
+                    val slots = timeSlots.flatMap { it.available_slots ?: emptyList() }.sortedBy { it.seconds }
+
+                    availableTimeSlots.addAll(slots)
+
                     isLoading = false
                 }
                 .addOnFailureListener {
@@ -145,11 +145,10 @@ fun AppointmentBookingForm(
         modifier = Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .padding(vertical = 8.dp),
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Specialization selection
-// Specialization selection
+        // Specialization dropdown
         ExposedDropdownMenuBox(
             expanded = specializationDropdownExpanded,
             onExpandedChange = { specializationDropdownExpanded = !specializationDropdownExpanded }
@@ -161,29 +160,18 @@ fun AppointmentBookingForm(
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Specialization") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(), // 👈 THIS IS CRITICAL
+                modifier = Modifier.fillMaxWidth().menuAnchor(),
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = specializationDropdownExpanded)
                 }
             )
-
             ExposedDropdownMenu(
                 expanded = specializationDropdownExpanded,
                 onDismissRequest = { specializationDropdownExpanded = false }
             ) {
-                DropdownMenuItem(
-                    text = { Text("All Specializations") },
-                    onClick = {
-                        selectedSpecialization = null
-                        specializationDropdownExpanded = false
-                    }
-                )
                 specializations.forEach { specialization ->
-                    val enumValue = DoctorSpecialization.valueOf(specialization)
                     DropdownMenuItem(
-                        text = { Text(enumValue.displayName) },
+                        text = { Text(DoctorSpecialization.valueOf(specialization).displayName) },
                         onClick = {
                             selectedSpecialization = specialization
                             specializationDropdownExpanded = false
@@ -193,7 +181,7 @@ fun AppointmentBookingForm(
             }
         }
 
-        // Doctor selection dropdown
+        // Doctor dropdown
         ExposedDropdownMenuBox(
             expanded = doctorDropdownExpanded,
             onExpandedChange = { doctorDropdownExpanded = it && doctors.isNotEmpty() }
@@ -203,7 +191,7 @@ fun AppointmentBookingForm(
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Doctor") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().menuAnchor(),
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = doctorDropdownExpanded)
                 },
@@ -225,38 +213,7 @@ fun AppointmentBookingForm(
             }
         }
 
-        // Date selection
-        Button(
-            onClick = { datePickerState = true },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = selectedDoctor != null
-        ) {
-            Text(selectedDate?.toDate()?.formatDate() ?: "Select Date")
-        }
-
-        if (datePickerState) {
-            val calendar = Calendar.getInstance()
-            val datePicker = android.app.DatePickerDialog(
-                context,
-                { _, year, month, dayOfMonth ->
-                    val selectedCalendar = Calendar.getInstance().apply {
-                        set(year, month, dayOfMonth)
-                        set(Calendar.HOUR_OF_DAY, 0)
-                        set(Calendar.MINUTE, 0)
-                        set(Calendar.SECOND, 0)
-                    }
-                    selectedDate = Timestamp(selectedCalendar.time)
-                    datePickerState = false
-                },
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH)
-            )
-            datePicker.datePicker.minDate = calendar.timeInMillis
-            datePicker.show()
-        }
-
-        // Time slot selection
+        // Time slot dropdown
         if (isLoading) {
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
@@ -271,7 +228,7 @@ fun AppointmentBookingForm(
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Available Time Slots") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().menuAnchor(),
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = timeSlotDropdownExpanded)
                     },
@@ -294,33 +251,79 @@ fun AppointmentBookingForm(
             }
         }
 
-        // Book appointment button
+        // Book button
         Button(
             onClick = {
                 if (selectedDoctor != null && selectedTimeSlot != null) {
                     val (doctorId, _) = selectedDoctor!!
+                    val selectedSlot = selectedTimeSlot!!
+                    isLoading = true
 
-                    val appointment = Appointment(
-                        date = selectedTimeSlot!!,
-                        doctor_id = doctorId,
-                        user_id = userId,
-                        status = "NOT_FINISHED"
-                    )
+                    val timeslotsRef = db.collection("timeslots")
+                    val appointmentsRef = db.collection("appointments")
 
-                    AppointmentRepository().bookAppointment(appointment) { success ->
-                        if (success) {
-                            Toast.makeText(context, "Appointment booked!", Toast.LENGTH_SHORT).show()
-                            onAppointmentBooked()
-                        } else {
-                            Toast.makeText(context, "Failed to book appointment", Toast.LENGTH_SHORT).show()
+                    // Сначала получаем документ timeslot, который содержит выбранный слот
+                    timeslotsRef
+                        .whereEqualTo("doctor_id", doctorId)
+                        .whereArrayContains("available_slots", selectedSlot)
+                        .limit(1)
+                        .get()
+                        .addOnSuccessListener { querySnapshot ->
+                            if (querySnapshot.isEmpty) {
+                                isLoading = false
+                                Toast.makeText(context, "Selected time slot is no longer available", Toast.LENGTH_SHORT).show()
+                                return@addOnSuccessListener
+                            }
+
+                            val timeslotDoc = querySnapshot.documents[0]
+
+                            // TODO START OF TRANSACTION
+                            db.runTransaction { transaction ->
+
+                                val docSnapshot = transaction.get(timeslotDoc.reference)
+
+                                val availableSlots = docSnapshot.get("available_slots") as? List<Timestamp> ?: emptyList()
+
+                                if (!availableSlots.contains(selectedSlot)) {
+                                    throw Exception("Selected time slot is no longer available in transaction")
+                                }
+
+                                val updatedSlots = availableSlots.toMutableList().apply {
+                                    remove(selectedSlot)
+                                }
+
+                                transaction.update(timeslotDoc.reference, "available_slots", updatedSlots)
+
+                                val newAppointment = hashMapOf(
+                                    "date" to selectedSlot,
+                                    "doctor_id" to doctorId,
+                                    "user_id" to userId,
+                                    "status" to "NOT_FINISHED"
+                                )
+                                transaction.set(appointmentsRef.document(), newAppointment)
+                                // TODO END OF TRANSACTION
+                            }.addOnSuccessListener {
+                                isLoading = false
+                                Toast.makeText(context, "Appointment booked!", Toast.LENGTH_SHORT).show()
+                                onAppointmentBooked()
+                            }.addOnFailureListener { e ->
+                                isLoading = false
+                                Toast.makeText(context, "Failed to book appointment: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+
                         }
-                    }
+                        .addOnFailureListener {
+                            isLoading = false
+                            Toast.makeText(context, "Failed to load time slot document", Toast.LENGTH_SHORT).show()
+                        }
                 } else {
                     Toast.makeText(context, "Please select all required fields", Toast.LENGTH_SHORT).show()
                 }
             },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = selectedDoctor != null && selectedTimeSlot != null
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 32.dp),
+            enabled = selectedDoctor != null && selectedTimeSlot != null && !isLoading
         ) {
             Text("Book Appointment")
         }
@@ -328,9 +331,10 @@ fun AppointmentBookingForm(
 }
 
 
-// Date formatting extensions
-fun Date.formatDate(): String = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(this)
-fun Date.formatTime(): String = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(this)
+fun Date.formatTime(): String {
+    val format = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
+    return format.format(this)
+}
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -344,14 +348,92 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
 
     val upcomingAppointments = remember { mutableStateListOf<Appointment>() }
     val pastAppointments = remember { mutableStateListOf<Appointment>() }
-    val doctorsCache = remember { mutableMapOf<String, Doctor>() }
+    val doctorsCache = remember { mutableStateMapOf<String, Doctor>() }
     var doctorsLoading by remember { mutableStateOf(false) }
 
-    // Debugging state
-    var debugInfo by remember { mutableStateOf("") }
+    // Для отображения процесса отмены
+    var cancelingAppointmentId by remember { mutableStateOf<String?>(null) }
 
-    // Fetch upcoming appointments
+    // Функция для отмены записи с транзакцией Firestore
+    fun cancelAppointment(
+        appointment: Appointment,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        val db = FirebaseFirestore.getInstance()
+
+        val appointmentRef = db.collection("appointments").document(appointment.id)
+        val timeslotsRef = db.collection("timeslots")
+
+        val doctorId = appointment.doctor_id
+        val slot = appointment.date
+
+        if (slot == null) {
+            onFailure("Appointment has no date")
+            return
+        }
+
+        // Step 1: Find the timeslot document for this doctor (no need to check if slot is in it here)
+        timeslotsRef
+            .whereEqualTo("doctor_id", doctorId)
+            .limit(1)
+            .get()
+            .addOnSuccessListener { querySnapshot ->
+                if (querySnapshot.isEmpty) {
+                    onFailure("No timeslot document found for doctor")
+                    return@addOnSuccessListener
+                }
+
+                val timeslotDoc = querySnapshot.documents[0]
+
+                // TODO START OF TRANSACTION
+                db.runTransaction { transaction ->
+
+                    val docSnapshot = transaction.get(timeslotDoc.reference)
+                    val currentSlots = docSnapshot.get("available_slots") as? List<Timestamp> ?: emptyList()
+
+                    val updatedSlots = currentSlots.toMutableList().apply {
+                        // only add back if it's not already present
+                        if (!contains(slot)) {
+                            add(slot)
+                        }
+                    }
+
+                    transaction.update(timeslotDoc.reference, "available_slots", updatedSlots)
+                    transaction.update(appointmentRef, "status", "CANCELLED")
+                // TODO END OF TRANSACTION
+                }.addOnSuccessListener {
+                    onSuccess()
+                }.addOnFailureListener { e ->
+                    onFailure("Transaction failed: ${e.message}")
+                }
+
+            }.addOnFailureListener { e ->
+                onFailure("Failed to load timeslot document: ${e.message}")
+            }
+    }
+
+    // Вызов отмены из UI
+// inside AppointmentsScreen — keep the same parameters
+    fun cancel(appointment: Appointment) {
+        cancelingAppointmentId = appointment.id
+        cancelAppointment(
+            appointment,
+            onSuccess = {
+                Toast.makeText(context, "Appointment cancelled", Toast.LENGTH_SHORT).show()
+                cancelingAppointmentId = null
+            },
+            onFailure = { msg ->
+                Toast.makeText(context, "Failed to cancel: $msg", Toast.LENGTH_SHORT).show()
+                cancelingAppointmentId = null
+            }
+        )
+    }
+
+    // Загрузка предстоящих записей
     LaunchedEffect(userId) {
+        isLoading = true
+        upcomingAppointments.clear()
         try {
             FirebaseFirestore.getInstance()
                 .collection("appointments")
@@ -364,10 +446,13 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
                         return@addSnapshotListener
                     }
 
-                    snapshot?.documents?.forEach { document ->
-                        document.toObject(Appointment::class.java)?.let { appointment ->
-                            if (upcomingAppointments.none { it.id == appointment.id }) {
+                    snapshot?.let {
+                        upcomingAppointments.clear()
+
+                        for (document in it.documents) {
+                            document.toObject(Appointment::class.java)?.let { appointment ->
                                 upcomingAppointments.add(appointment)
+
                                 if (!doctorsCache.containsKey(appointment.doctor_id)) {
                                     doctorsLoading = true
                                     fetchDoctorInfo(appointment.doctor_id, doctorsCache) {
@@ -376,6 +461,8 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
                                 }
                             }
                         }
+
+                        isLoading = false
                     }
                     isLoading = false
                 }
@@ -385,8 +472,9 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
         }
     }
 
-    // Fetch past appointments
+    // Загрузка прошлых записей
     LaunchedEffect(userId) {
+        pastAppointments.clear()
         try {
             FirebaseFirestore.getInstance()
                 .collection("appointments")
@@ -398,10 +486,13 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
                         return@addSnapshotListener
                     }
 
-                    snapshot?.documents?.forEach { document ->
-                        document.toObject(Appointment::class.java)?.let { appointment ->
-                            if (pastAppointments.none { it.id == appointment.id }) {
+                    snapshot?.let {
+                        pastAppointments.clear()
+
+                        for (document in it.documents) {
+                            document.toObject(Appointment::class.java)?.let { appointment ->
                                 pastAppointments.add(appointment)
+
                                 if (!doctorsCache.containsKey(appointment.doctor_id)) {
                                     doctorsLoading = true
                                     fetchDoctorInfo(appointment.doctor_id, doctorsCache) {
@@ -411,6 +502,7 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
                             }
                         }
                     }
+
                 }
         } catch (e: Exception) {
             error = "Exception: ${e.localizedMessage}"
@@ -424,16 +516,6 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Debug info (remove in production)
-            if (debugInfo.isNotEmpty()) {
-                Text(
-                    text = debugInfo,
-                    color = Color.Gray,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
-
             if (isLoading || doctorsLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -454,12 +536,14 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
                 ) {
                     Text("Error loading appointments", color = MaterialTheme.colorScheme.error)
                     Text(error!!, style = MaterialTheme.typography.bodySmall)
-                    Button(onClick = { isLoading = true; error = null }) {
+                    Button(onClick = {
+                        isLoading = true
+                        error = null
+                    }) {
                         Text("Retry")
                     }
                 }
             } else {
-                // Tab selection
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -476,14 +560,16 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
                     )
                 }
 
-                // Content
                 when (selectedTab) {
                     0 -> AppointmentList(
                         appointments = upcomingAppointments,
                         doctorsCache = doctorsCache,
                         emptyMessage = "No upcoming appointments",
                         showCancel = true,
-                        onCancel = { showCancelDialog(context, it) }
+                        onCancel = { appointment ->
+                            if (cancelingAppointmentId == appointment.id) return@AppointmentList
+                            cancel(appointment)
+                        }
                     )
                     1 -> AppointmentList(
                         appointments = pastAppointments,
@@ -494,7 +580,6 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // New Appointment Button
                 ExtendedFloatingActionButton(
                     onClick = { showBookingForm = true },
                     modifier = Modifier
@@ -508,59 +593,116 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
             }
         }
 
-        // Booking Dialog
-        if (showBookingForm) {
-            AlertDialog(
-                onDismissRequest = { showBookingForm = false },
-                title = { Text("Book New Appointment") },
-                text = {
-                    AppointmentBookingForm(
-                        userId = userId,
-                        onAppointmentBooked = {
-                            onAppointmentMade()
-                            showBookingForm = false
-                        }
-                    )
-                },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(onClick = { showBookingForm = false }) {
-                        Text("Cancel")
+        if (cancelingAppointmentId != null) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.4f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Cancelling appointment...")
                     }
                 }
-            )
+            }
         }
+    }
+
+    if (showBookingForm) {
+        AlertDialog(
+            onDismissRequest = { showBookingForm = false },
+            title = { Text("Book New Appointment") },
+            text = {
+                AppointmentBookingForm(
+                    userId = userId,
+                    onAppointmentBooked = {
+                        onAppointmentMade()
+                        showBookingForm = false
+                    }
+                )
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showBookingForm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
 @Composable
-private fun AppointmentList(
+fun AppointmentList(
     appointments: List<Appointment>,
     doctorsCache: Map<String, Doctor>,
     emptyMessage: String,
     showCancel: Boolean = false,
-    onCancel: ((String) -> Unit)? = null
+    onCancel: (Appointment) -> Unit = {}
 ) {
     if (appointments.isEmpty()) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(emptyMessage, style = MaterialTheme.typography.bodyMedium)
-        }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(appointments) { appointment ->
-                AppointmentItem(
-                    appointment = appointment,
-                    doctor = doctorsCache[appointment.doctor_id],
-                    onCancel = if (showCancel && appointment.status == "NOT_FINISHED") {
-                        { onCancel?.invoke(appointment.id) }
-                    } else null
-                )
+        Text(emptyMessage, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(16.dp))
+        return
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(vertical = 8.dp)
+    ) {
+        items(appointments, key = { it.id }) { appointment ->
+            val doctor = doctorsCache[appointment.doctor_id]
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                shape = MaterialTheme.shapes.medium,
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = doctor?.name ?: "Loading doctor...",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = "Date: ${appointment.date?.toDate()}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "Status: ${appointment.status}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (appointment.status == "CANCELLED") Color.Red else Color.Unspecified
+                        )
+                    }
+
+                    if (showCancel && appointment.status == "NOT_FINISHED") {
+                        IconButton(
+                            onClick = { onCancel(appointment) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = "Cancel Appointment",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -586,79 +728,6 @@ private fun TabButton(
         Text(text)
     }
 }
-
-@Composable
-fun AppointmentItem(
-    appointment: Appointment,
-    doctor: Doctor? = null,
-    onCancel: (() -> Unit)? = null
-) {
-    val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy hh:mm a", Locale.getDefault()) }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = when (appointment.status) {
-                "CANCELLED" -> MaterialTheme.colorScheme.errorContainer
-                "FINISHED" -> MaterialTheme.colorScheme.tertiaryContainer
-                else -> MaterialTheme.colorScheme.surfaceVariant
-            }
-        )
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            doctor?.let {
-                Text(
-                    text = "Dr. ${it.name} ${it.surname} (${it.specialization})",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            } ?: Text(
-                text = "Loading doctor info...",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            appointment.date?.let {
-                Text(
-                    text = dateFormat.format(it.toDate()),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Status: ", style = MaterialTheme.typography.bodySmall)
-                Text(
-                    text = appointment.status
-                        .replace("_", " ")
-                        .lowercase()
-                        .replaceFirstChar { it.uppercase() },
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = when (appointment.status) {
-                            "CANCELLED" -> MaterialTheme.colorScheme.error
-                            "FINISHED" -> MaterialTheme.colorScheme.tertiary
-                            else -> MaterialTheme.colorScheme.onSurface
-                        }
-                    )
-                )
-            }
-
-            onCancel?.let {
-                Button(
-                    onClick = it,
-                    modifier = Modifier.align(Alignment.End),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("Cancel Appointment")
-                }
-            }
-        }
-    }
-}
-
 private fun fetchDoctorInfo(
     doctorId: String,
     doctorsCache: MutableMap<String, Doctor>,
@@ -679,48 +748,62 @@ private fun fetchDoctorInfo(
         }
 }
 
-private fun showCancelDialog(context: Context, appointmentId: String) {
-    AlertDialog.Builder(context)
-        .setTitle("Cancel Appointment")
-        .setMessage("Are you sure you want to cancel this appointment?")
-        .setPositiveButton("Yes") { _, _ ->
-            cancelAppointment(appointmentId, context)
-        }
-        .setNegativeButton("No", null)
-        .show()
-}
 
-private fun cancelAppointment(appointmentId: String, context: Context) {
-    FirebaseFirestore.getInstance()
-        .collection("appointments")
-        .document(appointmentId)
-        .update("status", "CANCELLED")
-        .addOnSuccessListener {
-            Toast.makeText(context, "Appointment cancelled", Toast.LENGTH_SHORT).show()
-        }
-        .addOnFailureListener { e ->
-            Toast.makeText(context, "Failed to cancel: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun AppointmentsScreenPreview() {
-    AppointmentsScreen(userId = "test_user") {}
-}
-
-
-private fun fetchDoctorInfo(
-    doctorId: String,
-    doctorsCache: MutableMap<String, Doctor>
+/**
+ * Cancels an appointment in a single Firestore transaction:
+ *  1. Verifies the appointment is still active.
+ *  2. Marks the appointment document as "CANCELLED".
+ *  3. Adds the timeslot back to the doctor's available_slots array
+ *     (only if it is not already there).
+ */
+fun cancelAppointment(
+    appointment: Appointment,
+    onSuccess: () -> Unit,
+    onFailure: (String) -> Unit
 ) {
-    FirebaseFirestore.getInstance()
-        .collection("doctors")
-        .document(doctorId)
+    val db = FirebaseFirestore.getInstance()
+    val appointmentsRef = db.collection("appointments").document(appointment.id)
+
+    // STEP 1 – find the timeslot document for this doctor *outside* the transaction
+    db.collection("timeslots")
+        .whereEqualTo("doctor_id", appointment.doctor_id)
+        .limit(1)
         .get()
-        .addOnSuccessListener { document ->
-            document.toObject(Doctor::class.java)?.let {
-                doctorsCache[doctorId] = it
+        .addOnSuccessListener { qs ->
+            if (qs.isEmpty) {
+                onFailure("Timeslot document not found for doctor")
+                return@addOnSuccessListener
             }
+
+            val timeslotRef = qs.documents[0].reference
+
+            // STEP 2 – run the actual transaction
+            // TODO START OF TRANSACTION
+            db.runTransaction { txn ->
+                /* ----- 2a. validate / update appointment  ----- */
+                val apptSnap   = txn.get(appointmentsRef)
+                val status     = apptSnap.getString("status")
+
+                if (status == null || status == "CANCELLED") {
+                    throw Exception("Appointment already cancelled or not found")
+                }
+                txn.update(appointmentsRef, "status", "CANCELLED")
+
+                /* ----- 2b. return slot to available_slots ----- */
+                val slotSnap        = txn.get(timeslotRef)
+                val currentSlots    =
+                    (slotSnap.get("available_slots") as? List<Timestamp>)?.toMutableList()
+                        ?: mutableListOf()
+
+                if (!currentSlots.contains(appointment.date)) {
+                    currentSlots.add(appointment.date as Timestamp)   // put it back
+                }
+
+                txn.update(timeslotRef, "available_slots", currentSlots)
+            }
+                // TODO END OF TRANSACTION
+                .addOnSuccessListener { onSuccess() }
+                .addOnFailureListener { e -> onFailure(e.message ?: "Unknown error") }
         }
+        .addOnFailureListener { e -> onFailure(e.message ?: "Unknown error") }
 }
