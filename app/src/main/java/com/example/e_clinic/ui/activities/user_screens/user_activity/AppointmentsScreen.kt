@@ -149,20 +149,26 @@ fun AppointmentBookingForm(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Specialization selection
+// Specialization selection
         ExposedDropdownMenuBox(
             expanded = specializationDropdownExpanded,
             onExpandedChange = { specializationDropdownExpanded = !specializationDropdownExpanded }
         ) {
             TextField(
-                value = selectedSpecialization ?: "Select Specialization",
+                value = selectedSpecialization?.let {
+                    DoctorSpecialization.valueOf(it).displayName
+                } ?: "Select Specialization",
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Specialization") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(), // 👈 THIS IS CRITICAL
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = specializationDropdownExpanded)
                 }
             )
+
             ExposedDropdownMenu(
                 expanded = specializationDropdownExpanded,
                 onDismissRequest = { specializationDropdownExpanded = false }

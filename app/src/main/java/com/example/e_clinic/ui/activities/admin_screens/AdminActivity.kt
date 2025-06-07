@@ -523,7 +523,7 @@ fun ManageTimeslotsScreen() {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("${slot.startTime} - ${slot.endTime}")
+                        //Text("${slot.startTime} - ${slot.endTime}")
                         IconButton(onClick = {
                             FirebaseFirestore.getInstance()
                                 .collection("timeslots")
