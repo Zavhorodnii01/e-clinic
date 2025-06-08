@@ -57,7 +57,7 @@
             android:name=".ui.activities.admin_screens.AdminActivity"
             android:exported="true" />
         <activity
-            android:name=".ui.activities.doctor_screens.DoctorActivity"
+            android:name=".ui.activities.doctor_screens.doctor_activity.DoctorActivity"
             android:exported="true" />
         <activity
             android:name=".ui.activities.admin_screens.AdminLogInActivity"
@@ -69,7 +69,7 @@
             android:name=".ui.activities.doctor_screens.DoctorLogInActivity"
             android:exported="true" />
         <activity
-            android:name=".ui.activities.doctor_screens.PrescribeActivity" />
+            android:name=".ui.activities.doctor_screens.doctor_activity.PrescribeActivity" />
         <activity
             android:name=".ui.activities.user_screens.PrescriptionListActivity" />
         <activity

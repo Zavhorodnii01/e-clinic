@@ -5,6 +5,10 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import com.example.e_clinic.CSV.collections.Drug
+import com.google.firebase.Timestamp
+import java.text.SimpleDateFormat
+import java.util.Locale
 import com.example.e_clinic.Firebase.collections.Prescription
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
@@ -12,7 +16,7 @@ import java.io.ByteArrayOutputStream
 
 
 
-fun generatePrescription(medication: String, prescription: Prescription): ByteArray {
+fun generatePrescription(medication: Drug, dosage: String, quantity: String, prescription: Prescription): ByteArray {
     // Create a larger bitmap for better quality
     val width = 800
     val height = 1200
@@ -33,7 +37,7 @@ fun generatePrescription(medication: String, prescription: Prescription): ByteAr
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         textAlign = Paint.Align.CENTER
     }
-    canvas.drawText("HEALTHCARE CLINIC", width / 2f, 60f, headerPaint)
+    canvas.drawText("PRESCRIPTION", width / 2f, 60f, headerPaint)
 
     val subHeaderPaint = Paint().apply {
         color = Color.DKGRAY
@@ -55,26 +59,45 @@ fun generatePrescription(medication: String, prescription: Prescription): ByteAr
         textSize = 18f
     }
 
-    // Doctor and patient info
-    canvas.drawText("Dr. Smith Johnson", 50f, 150f, mainPaint)
-    canvas.drawText("License: MD123456", 50f, 180f, mainPaint)
-    canvas.drawText("Date: ${prescription.issued_date}", width - 250f, 150f, mainPaint)
-
-    canvas.drawText("Patient: John Doe", 50f, 220f, mainPaint)
-    canvas.drawText("DOB: 01/15/1985", 50f, 250f, mainPaint)
-    canvas.drawText("Patient ID: ", width - 250f, 220f, mainPaint)
-
-    // Prescription details
     val boldPaint = Paint(mainPaint).apply {
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
-    canvas.drawText("PRESCRIPTION", 50f, 300f, boldPaint)
+
+    val dateFormat = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
+    val issuedDate = prescription.issued_date?.toDate()?.let { dateFormat.format(it) } ?: "N/A"
+
+    val db = FirebaseFirestore.getInstance()
+    var doctorName = "Loading..."
+    var doctorPhone = "Loading..."
+    var patientName = "Loading..."
+
+    // Fetch doctor details
+    db.collection("doctors").document(prescription.doctor_id).get()
+        .addOnSuccessListener { doc ->
+            doctorName = "${doc.getString("name")} ${doc.getString("surname")}"
+            doctorPhone = doc.getString("phone") ?: "N/A"
+        }
+
+    // Fetch patient details
+    db.collection("users").document(prescription.user_id).get()
+        .addOnSuccessListener { doc ->
+            patientName = "${doc.getString("name")} ${doc.getString("surname")}"
+        }
+
+    // Doctor and patient info
+
+    canvas.drawText("Doctor: $doctorName", 50f, 150f, mainPaint)
+    canvas.drawText("Phone Number: $doctorPhone", 50f, 180f, mainPaint)
+    canvas.drawText("Date of Issue: $issuedDate", width - 250f, 150f, mainPaint)
+
+    canvas.drawText("Pacjent: $patientName", 50f, 220f, mainPaint)
 
     // Medication details
-    canvas.drawText("Medication: $medication", 50f, 340f, mainPaint)
-    canvas.drawText("Dosage: 1 tablet twice daily", 50f, 370f, mainPaint)
-    canvas.drawText("Duration: 10 days", 50f, 400f, mainPaint)
-    canvas.drawText("Refills: 1", 50f, 430f, mainPaint)
+    canvas.drawText("Drug name: ${medication.name}+${medication.typeOfPrescription}", 50f, 300f, boldPaint)
+    canvas.drawText("Active substance: ${medication.activeSubstance}", 50f, 340f, mainPaint)
+    canvas.drawText("Dosage: ${dosage}", 50f, 370f, mainPaint)
+    canvas.drawText("Quantity: ${quantity}", 50f, 400f, mainPaint)
+    canvas.drawText("Form: ${medication.form}", 50f, 400f, mainPaint)
 
     // Instructions
     canvas.drawText("Instructions: " + prescription.doctor_comment, 50f, 480f, mainPaint)
@@ -98,7 +121,7 @@ fun generatePrescription(medication: String, prescription: Prescription): ByteAr
 
     // Doctor signature area
     canvas.drawText("_________________________", 50f, 700f, mainPaint)
-    canvas.drawText("Dr. Smith Johnson", 50f, 730f, mainPaint)
+    canvas.drawText("$doctorName", 50f, 730f, mainPaint)
 
     // Footer
     val footerPaint = Paint().apply {
@@ -106,7 +129,12 @@ fun generatePrescription(medication: String, prescription: Prescription): ByteAr
         textSize = 14f
         textAlign = Paint.Align.CENTER
     }
-    canvas.drawText("This prescription is valid for 6 months from issue date", width / 2f, 800f, footerPaint)
+    val validityText = if (medication.typeOfPrescription == "Rpw") {
+        "Prescription valid for 30 days from the date of issue"
+    } else {
+        "Prescription valid for 6 months from the date of issue"
+    }
+    canvas.drawText(validityText, width / 2f, 800f, subHeaderPaint)
     canvas.drawText("For questions, please call (555) 123-4567", width / 2f, 830f, footerPaint)
 
     // Convert to byte array
@@ -114,8 +142,9 @@ fun generatePrescription(medication: String, prescription: Prescription): ByteAr
     bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
     return stream.toByteArray()
 }
-fun uploadPrescriptionToStorage(prescription: Prescription, medication: String) {
-    val byteArray = generatePrescription(medication, prescription)
+
+fun uploadPrescriptionToStorage(prescription: Prescription, dosage: String,quantity: String, medication: Drug) {
+    val byteArray = generatePrescription(medication, dosage, quantity, prescription)
 
     val storageRef = FirebaseStorage.getInstance().reference
     val fileName = "${prescription.id}_${System.currentTimeMillis()}.png"

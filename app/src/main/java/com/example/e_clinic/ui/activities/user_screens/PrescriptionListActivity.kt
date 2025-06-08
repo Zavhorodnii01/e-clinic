@@ -16,10 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.example.e_clinic.ui.activities.doctor_screens.DoctorActivity
-import com.example.e_clinic.ui.activities.doctor_screens.PrescribeScreen
 import com.example.e_clinic.ui.activities.user_screens.user_activity.UserActivity
 
 class PrescriptionListActivity : ComponentActivity() {

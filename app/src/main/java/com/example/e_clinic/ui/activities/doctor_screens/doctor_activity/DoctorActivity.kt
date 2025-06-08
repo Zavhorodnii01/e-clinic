@@ -1,4 +1,4 @@
-package com.example.e_clinic.ui.activities.doctor_screens
+package com.example.e_clinic.ui.activities.doctor_screens.doctor_activity
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -35,8 +35,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,7 +45,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,23 +55,23 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.e_clinic.ui.theme.EClinicTheme
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.e_clinic.Firebase.collections.Doctor
 import com.example.e_clinic.Firebase.collections.Prescription
 import com.example.e_clinic.Firebase.storage.uploadPrescriptionToStorage
+import com.example.e_clinic.ZEGOCloud.launchZegoChat
 import com.example.e_clinic.services.functions.appServices
+import com.example.e_clinic.ui.activities.user_screens.user_activity.AppointmentsScreen
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
 
 
@@ -93,39 +90,46 @@ class DoctorActivity : ComponentActivity() {
 }
 
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
-    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     var showSettings by remember { mutableStateOf(false) }
-    var userName by remember { mutableStateOf("") }
-    var userEmail by remember { mutableStateOf("") }
+    var doctorName by remember { mutableStateOf("") }
+    val doctor = Doctor()
 
 
-    //TODO: Fetch user info from Firebase
+    val user = FirebaseAuth.getInstance().currentUser
+    user?.let {
+        val db = FirebaseFirestore.getInstance()
+        db.collection("doctors").whereEqualTo("e-mail", it.email).get()
+            .addOnSuccessListener { documents ->
+                if (!documents.isEmpty) {
+                    val doctor = documents.documents[0]
+                    doctorName = doctor.getString("name") ?: "Unknown Doctor"
+                } else {
+                    doctorName = "Unknown Doctor"
+                }
+            }
+            .addOnFailureListener {
+                doctorName = "Unknown Doctor"
+            }
+    }
 
-//    val user = FirebaseAuth.getInstance().currentUser
-//    user?.let {
-//        userName = it.displayName ?: "Unknown User"
-//        userEmail = it.email ?: "No Email"
-//    }
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Welcome $userName !") },
+                title = { Text("Welcome $doctorName!") },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary, // Background color
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer// Title color
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 actions = {
                     IconButton(onClick = { showSettings = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = "Menu"
-                        )
+                        Icon(imageVector = Icons.Default.Menu, contentDescription = "Menu")
                     }
                 }
             )
@@ -133,26 +137,14 @@ fun MainScreen() {
         bottomBar = {
             BottomNavigationBar(navController = navController)
         }
-    ) {innerPadding ->
-        NavigationHost(navController = navController, modifier = Modifier.padding(innerPadding))
+    ) { innerPadding ->
+        NavigationHost(navController = navController, modifier = Modifier.padding(innerPadding), doctor = doctor)
     }
     if (showSettings) {
         SettingsScreen(onClose = { showSettings = false })
     }
-
 }
 
-@Composable
-fun NavigationHost(navController: NavHostController, modifier: Modifier) {
-    val coroutineScope = rememberCoroutineScope()
-    NavHost(navController = navController, startDestination = "home", modifier = modifier) {
-        composable("home") { HomeScreen() }
-        composable("services") { ServicesScreen(coroutineScope = coroutineScope)}
-        composable("documents") { DocumentsScreen() }
-        composable("settings") { SettingsScreen(onClose = {}) }
-        // TODO: Handling the services lists
-    }
-}
 
 @Composable
 fun SettingsScreen(onClose: () -> Unit) {
@@ -264,110 +256,61 @@ fun ServiceListItem(
 }
 
 
-@Composable
-fun DocumentsScreen() {
-    val scrollState = rememberScrollState()
-    var userId by remember { mutableStateOf("") }
-    var medication by remember { mutableStateOf("") }
-    var doctorComment by remember { mutableStateOf("") }
+//@Composable
+//fun DocumentsScreen() {
+//    val scrollState = rememberScrollState()
+//    var userId by remember { mutableStateOf("") }
+//    var medication by remember { mutableStateOf("") }
+//    var doctorComment by remember { mutableStateOf("") }
+//
+//    Column(modifier = Modifier.verticalScroll(scrollState)) {
+//        Text(
+//            text = "Your Documents",
+//            style = MaterialTheme.typography.headlineSmall,
+//            modifier = Modifier.padding(16.dp)
+//        )
+//
+//        OutlinedTextField(
+//            value = userId,
+//            onValueChange = { userId = it },
+//            label = { Text("Enter User ID") },
+//            modifier = Modifier
+//                .padding(16.dp)
+//                .fillMaxWidth()
+//        )
+//        OutlinedTextField(
+//            value = medication,
+//            onValueChange = { medication = it },
+//            label = { Text("Enter Medication") },
+//            modifier = Modifier
+//                .padding(16.dp)
+//                .fillMaxWidth()
+//        )
+//        OutlinedTextField(
+//            value = doctorComment,
+//            onValueChange = { doctorComment = it },
+//            label = { Text("Write Comment") },
+//            modifier = Modifier
+//                .padding(16.dp)
+//                .fillMaxWidth()
+//        )
+//
+//        Button(
+//            onClick = {
+//                val doctorId = FirebaseAuth.getInstance().currentUser?.uid
+//                val prescription = Prescription(doctor_id=doctorId.toString(), user_id=userId,issued_date= Timestamp.now(), link_to_storage="link", appointment_id = "appointmentid" , doctor_comment = doctorComment)
+//                addPrescription(prescription, medication)
+//                      },
+//            modifier = Modifier.padding(16.dp)
+//        ) {
+//            Text("Load Document")
+//        }
+//    }
+//}
 
-    Column(modifier = Modifier.verticalScroll(scrollState)) {
-        Text(
-            text = "Your Documents",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(16.dp)
-        )
-
-        OutlinedTextField(
-            value = userId,
-            onValueChange = { userId = it },
-            label = { Text("Enter User ID") },
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = medication,
-            onValueChange = { medication = it },
-            label = { Text("Enter Medication") },
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = doctorComment,
-            onValueChange = { doctorComment = it },
-            label = { Text("Write Comment") },
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth()
-        )
-
-        Button(
-            onClick = {
-                val doctorId = FirebaseAuth.getInstance().currentUser?.uid
-                val prescription = Prescription(doctor_id=doctorId.toString(), user_id=userId,issued_date= Timestamp.now(), link_to_storage="link", appointment_id = "appointmentid" , doctor_comment = doctorComment)
-                addPrescription(prescription, medication)
-                      },
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text("Load Document")
-        }
-    }
-}
-
-fun addPrescription(prescription: Prescription, medication : String) {
-    uploadPrescriptionToStorage(prescription, medication)
-}
-
-
-@Composable
-fun HomeScreen() {
-    //TODO: Actual Home Screen UI
-    val scrollState = rememberScrollState()
-
-    val services = appServices()
-    Column {
-
-        Column {
-            Text(
-                text = "Upcoming Appointments",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(16.dp)
-            )
-
-
-            //TODO: Fetch appointments from Firebase as LazyList
-            val appointments = listOf(
-                "List item" to "Supporting line text lorem ipsum dolor sit amet, consectetur.",
-                "List item" to "Supporting line text lorem ipsum dolor sit amet, consectetur.",
-                "List item" to "Supporting line text lorem ipsum dolor sit amet, consectetur."
-            )
-
-            LazyColumn {
-                items(appointments) { (title, description) ->
-                    AppointmentItem(title = title, description = description)
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-            }
-        }
-
-
-        Spacer(modifier = Modifier.height(24.dp))
-        Divider()
-        Spacer(modifier = Modifier.height(24.dp))
-
-        ServicesSection(
-            services = services,
-            onServiceClick = { service ->
-                // Handle service click
-            }
-        )
-
-
-    }
-}
-
+//fun addPrescription(prescription: Prescription, medication : String) {
+//    uploadPrescriptionToStorage(prescription, medication)
+//}
 
 
 @Composable
@@ -461,56 +404,35 @@ fun ServiceCard(
 }
 
 
-
 @Composable
-fun BottomNavigationBar(navController: NavHostController) {
-    val items = listOf(
-        BottomNavItem.Home,
-        BottomNavItem.Services,
-        BottomNavItem.Documents
-    )
-
-    NavigationBar {
-        val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentRoute = navBackStackEntry?.destination?.route
-
-        items.forEach { item ->
-            NavigationBarItem(
-                selected = currentRoute == item.route,
-                onClick = {
-                    if (currentRoute != item.route) {
-                        navController.navigate(item.route) {
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                },
-                icon = {
-                    when (item) {
-                        BottomNavItem.Home -> Icon(Icons.Default.Home, contentDescription = "Home")
-                        BottomNavItem.Services -> Icon(Icons.Default.List, contentDescription = "S")
-                        BottomNavItem.Documents -> Icon(Icons.Default.AccountBox, contentDescription = "2")
-                    }
-                },
-                label = { Text(text = item.title) }
-            )
+fun NavigationHost(navController: NavHostController, modifier: Modifier, doctor: Doctor) {
+    NavHost(navController = navController, startDestination = "home", modifier = modifier) {
+        composable("home") { com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.HomeScreen() }
+        composable("chat") { com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.ChatScreen() }
+        composable("prescriptions") { com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.PrescribeScreen()}
+        composable("profile") { com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.ProfileScreen() }
+        composable("settings") {
+            com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.SettingsScreen(
+                onClose = {})
         }
     }
 }
 
-// Sealed class to define different bottom navigation items
-sealed class BottomNavItem(val route: String, val title: String) {
-    object Home : BottomNavItem("home", "Home")
-    object Services : BottomNavItem("services", "Services")
-    object Documents : BottomNavItem("documents", "Documents")
-}
-
-
-@Preview
 @Composable
-fun PreviewUserActivity() {
-    EClinicTheme {
-        MainScreen()
+fun BottomNavigationBar(navController: NavHostController) {
+    NavigationBar {
+        NavigationBarItem(icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") }, selected = false, onClick = { navController.navigate("home") })
+        NavigationBarItem(icon = { Icon(Icons.Default.AccountBox, null) }, label = { Text("Chat") }, selected = false, onClick = { navController.navigate("chat") })
+        NavigationBarItem(icon = { Icon(Icons.Default.Check, null) }, label = { Text("Prescriptions") }, selected = false, onClick = { navController.navigate("prescriptions") })
+        NavigationBarItem(icon = { Icon(Icons.Default.Menu, null) }, label = { Text("Profile") }, selected = false, onClick = { navController.navigate("profile") })
     }
 }
+
+@Composable
+fun ChatScreen() {
+    val context = LocalContext.current
+    launchZegoChat(context)
+    //val context = LocalContext.current
+    Text("Chat Screen")
+}
+

@@ -10,7 +10,7 @@ class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         FirebaseApp.initializeApp(this)
-        initZegocloud()  // Initialize ZEGOCLOUD
+        //initZegocloud()  // Initialize ZEGOCLOUD
     }
 
     private fun initZegocloud() {

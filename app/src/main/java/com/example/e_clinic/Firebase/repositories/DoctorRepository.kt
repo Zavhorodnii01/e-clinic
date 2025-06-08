@@ -26,5 +26,4 @@ class DoctorRepository {
                 onSuccess(document.toObject(Doctor::class.java))
             }
     }
-
 }
