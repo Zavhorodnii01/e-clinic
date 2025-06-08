@@ -112,6 +112,8 @@ dependencies {
     // DateTime Dialogs
     implementation("io.github.vanpra.compose-material-dialogs:datetime:0.9.0")
     implementation(libs.firebase.appcheck.debug)
+    implementation(libs.androidx.datastore.core.android)
+    implementation(libs.generativeai)
 
     // Testy
     testImplementation(libs.junit)

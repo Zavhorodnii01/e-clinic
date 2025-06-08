@@ -4,11 +4,11 @@ import com.example.e_clinic.services.Service
 
 fun appServices(): List<Service> {
     return listOf(
-        Service(1, "appointment", "Appointment"),
-        Service(2, "prescription", "Your Prescriptions"),
-        Service(3, "doctor_chat", "Chat with Doctor"),
-        Service(4, "ai_chat", "Chat with Assistant"),
-        Service(5, "drug_list", "Search for Drugs"),
+        Service(1, "My Appointments", "My Appointments"),
+        Service(2, "My Prescriptions", "My Prescriptions"),
+        Service(3, "Chat with Doctor", "Chat with Doctor"),
+        Service(4, "Chat with AI Assistant", "Chat with AI Assistant"),
+        Service(5, "Search for Drugs", "Search for Drugs"),
         // Add more services as needed,
     )
 }

@@ -16,7 +16,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -36,8 +38,20 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.zegocloud.zimkit.common.ZIMKitRouter
+import com.zegocloud.zimkit.common.enums.ZIMKitConversationType
 import java.text.SimpleDateFormat
 import java.util.*
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import im.zego.connection.internal.ZegoConnectionImpl.context
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -337,7 +351,6 @@ fun Date.formatTime(): String {
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
     val context = LocalContext.current
@@ -351,86 +364,44 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
     val doctorsCache = remember { mutableStateMapOf<String, Doctor>() }
     var doctorsLoading by remember { mutableStateOf(false) }
 
-    // Для отображения процесса отмены
     var cancelingAppointmentId by remember { mutableStateOf<String?>(null) }
 
-    // Функция для отмены записи с транзакцией Firestore
-    fun cancelAppointment(
-        appointment: Appointment,
-        onSuccess: () -> Unit,
-        onFailure: (String) -> Unit
-    ) {
-        val db = FirebaseFirestore.getInstance()
-
-        val appointmentRef = db.collection("appointments").document(appointment.id)
-        val timeslotsRef = db.collection("timeslots")
-
+    // Function to open chat with the doctor
+    fun openChatWithDoctor(appointment: Appointment) {
         val doctorId = appointment.doctor_id
-        val slot = appointment.date
-
-        if (slot == null) {
-            onFailure("Appointment has no date")
+        if (doctorId.isBlank()) {
+            Toast.makeText(context, "Invalid doctor ID", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // Step 1: Find the timeslot document for this doctor (no need to check if slot is in it here)
-        timeslotsRef
-            .whereEqualTo("doctor_id", doctorId)
-            .limit(1)
-            .get()
-            .addOnSuccessListener { querySnapshot ->
-                if (querySnapshot.isEmpty) {
-                    onFailure("No timeslot document found for doctor")
-                    return@addOnSuccessListener
-                }
-
-                val timeslotDoc = querySnapshot.documents[0]
-
-                // TODO START OF TRANSACTION
-                db.runTransaction { transaction ->
-
-                    val docSnapshot = transaction.get(timeslotDoc.reference)
-                    val currentSlots = docSnapshot.get("available_slots") as? List<Timestamp> ?: emptyList()
-
-                    val updatedSlots = currentSlots.toMutableList().apply {
-                        // only add back if it's not already present
-                        if (!contains(slot)) {
-                            add(slot)
-                        }
-                    }
-
-                    transaction.update(timeslotDoc.reference, "available_slots", updatedSlots)
-                    transaction.update(appointmentRef, "status", "CANCELLED")
-                // TODO END OF TRANSACTION
-                }.addOnSuccessListener {
-                    onSuccess()
-                }.addOnFailureListener { e ->
-                    onFailure("Transaction failed: ${e.message}")
-                }
-
-            }.addOnFailureListener { e ->
-                onFailure("Failed to load timeslot document: ${e.message}")
-            }
-    }
-
-    // Вызов отмены из UI
-// inside AppointmentsScreen — keep the same parameters
-    fun cancel(appointment: Appointment) {
-        cancelingAppointmentId = appointment.id
-        cancelAppointment(
-            appointment,
-            onSuccess = {
-                Toast.makeText(context, "Appointment cancelled", Toast.LENGTH_SHORT).show()
-                cancelingAppointmentId = null
-            },
-            onFailure = { msg ->
-                Toast.makeText(context, "Failed to cancel: $msg", Toast.LENGTH_SHORT).show()
-                cancelingAppointmentId = null
-            }
+        // Assuming userId is the current logged-in user
+        ZIMKitRouter.toMessageActivity(
+            context,
+            doctorId, // This should be the recipient (doctor) ID
+            ZIMKitConversationType.ZIMKitConversationTypePeer
         )
     }
 
-    // Загрузка предстоящих записей
+    // Function to cancel the appointment
+    fun cancel(appointment: Appointment) {
+        cancelingAppointmentId = appointment.id
+
+        FirebaseFirestore.getInstance()
+            .collection("appointments")
+            .document(appointment.id)
+            .update("status", "CANCELLED")
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    cancelingAppointmentId = null
+                    Toast.makeText(context, "Appointment cancelled", Toast.LENGTH_SHORT).show()
+                } else {
+                    cancelingAppointmentId = null
+                    Toast.makeText(context, "Failed to cancel appointment", Toast.LENGTH_SHORT).show()
+                }
+            }
+    }
+
+    // Loading upcoming appointments
     LaunchedEffect(userId) {
         isLoading = true
         upcomingAppointments.clear()
@@ -464,7 +435,6 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
 
                         isLoading = false
                     }
-                    isLoading = false
                 }
         } catch (e: Exception) {
             error = "Exception: ${e.localizedMessage}"
@@ -472,7 +442,7 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
         }
     }
 
-    // Загрузка прошлых записей
+    // Loading past appointments
     LaunchedEffect(userId) {
         pastAppointments.clear()
         try {
@@ -502,12 +472,13 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
                             }
                         }
                     }
-
                 }
         } catch (e: Exception) {
             error = "Exception: ${e.localizedMessage}"
         }
     }
+
+    Spacer(modifier = Modifier.height(16.dp))
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -516,80 +487,49 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            if (isLoading || doctorsLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
-                        if (doctorsLoading) {
-                            Text("Loading doctor information...", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                }
-            } else if (error != null) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("Error loading appointments", color = MaterialTheme.colorScheme.error)
-                    Text(error!!, style = MaterialTheme.typography.bodySmall)
-                    Button(onClick = {
-                        isLoading = true
-                        error = null
-                    }) {
-                        Text("Retry")
-                    }
-                }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    TabButton(
-                        text = "Upcoming (${upcomingAppointments.size})",
-                        isSelected = selectedTab == 0,
-                        onClick = { selectedTab = 0 }
-                    )
-                    TabButton(
-                        text = "Past (${pastAppointments.size})",
-                        isSelected = selectedTab == 1,
-                        onClick = { selectedTab = 1 }
-                    )
-                }
+            ExtendedFloatingActionButton(
+                onClick = { showBookingForm = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ) {
+                Text("Make New Appointment")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
 
-                when (selectedTab) {
-                    0 -> AppointmentList(
-                        appointments = upcomingAppointments,
-                        doctorsCache = doctorsCache,
-                        emptyMessage = "No upcoming appointments",
-                        showCancel = true,
-                        onCancel = { appointment ->
-                            if (cancelingAppointmentId == appointment.id) return@AppointmentList
-                            cancel(appointment)
-                        }
-                    )
-                    1 -> AppointmentList(
-                        appointments = pastAppointments,
-                        doctorsCache = doctorsCache,
-                        emptyMessage = "No past appointments"
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                ExtendedFloatingActionButton(
-                    onClick = { showBookingForm = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ) {
-                    Text("Make New Appointment")
-                }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                TabButton(
+                    text = "Upcoming (${upcomingAppointments.size})",
+                    isSelected = selectedTab == 0,
+                    onClick = { selectedTab = 0 }
+                )
+                TabButton(
+                    text = "Past (${pastAppointments.size})",
+                    isSelected = selectedTab == 1,
+                    onClick = { selectedTab = 1 }
+                )
+            }
+            // Sort past appointments with most recent first
+            pastAppointments.sortByDescending { it.date } // Replace with actual datetime field
+            when (selectedTab) {
+                0 -> AppointmentList(
+                    appointments = upcomingAppointments,
+                    doctorsCache = doctorsCache,
+                    emptyMessage = "No upcoming appointments",
+                    showCancel = true,
+                    onCancel = { appointment -> cancel(appointment) },
+                    onStartChat = { appointment -> openChatWithDoctor(appointment) }
+                )
+                1 -> AppointmentList(
+                    appointments = pastAppointments,
+                    doctorsCache = doctorsCache,
+                    emptyMessage = "No past appointments"
+                )
             }
         }
 
@@ -640,32 +580,39 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
     }
 }
 
+
+
 @Composable
 fun AppointmentList(
     appointments: List<Appointment>,
     doctorsCache: Map<String, Doctor>,
     emptyMessage: String,
     showCancel: Boolean = false,
-    onCancel: (Appointment) -> Unit = {}
+    onCancel: (Appointment) -> Unit = {},
+    onStartChat: (Appointment) -> Unit = {},
 ) {
     if (appointments.isEmpty()) {
-        Text(emptyMessage, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(16.dp))
+        Text(
+            emptyMessage,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(16.dp)
+        )
         return
     }
 
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(vertical = 8.dp)
+        contentPadding = PaddingValues(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(appointments, key = { it.id }) { appointment ->
             val doctor = doctorsCache[appointment.doctor_id]
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp),
-                shape = MaterialTheme.shapes.medium,
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                elevation = CardDefaults.cardElevation(4.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -674,9 +621,10 @@ fun AppointmentList(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = doctor?.name ?: "Loading doctor...",
+                            text = doctor?.name ?: "Loading doctor…",
                             style = MaterialTheme.typography.titleMedium
                         )
                         Text(
@@ -690,16 +638,31 @@ fun AppointmentList(
                         )
                     }
 
-                    if (showCancel && appointment.status == "NOT_FINISHED") {
-                        IconButton(
-                            onClick = { onCancel(appointment) },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = "Cancel Appointment",
-                                tint = MaterialTheme.colorScheme.error
-                            )
+                    if (appointment.status == "NOT_FINISHED") {
+                        Row {
+                            if (showCancel) {
+                                IconButton(
+                                    onClick = { onCancel(appointment) },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = "Cancel Appointment",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+
+                            IconButton(
+                                onClick = { onStartChat(appointment) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Phone,
+                                    contentDescription = "Start Chat",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
@@ -707,6 +670,50 @@ fun AppointmentList(
         }
     }
 }
+
+
+/** Logs in to Zego (if not already) and opens the peer chat with this doctor. */
+fun openChatWithDoctor(appt: Appointment) {
+    val doctorId = appt.doctor_id
+    if (doctorId.isBlank()) {
+        Toast.makeText(context, "Invalid doctor ID", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    val firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+    if (firebaseUser == null) {
+        Toast.makeText(context, "You must be logged in first.", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    val selfId      = firebaseUser.uid
+    val selfName    = firebaseUser.displayName ?: firebaseUser.email ?: selfId
+    val selfAvatar  = ""   // optional avatar URL
+
+    /* If we’re already the same Zego user, skip connectUser. */
+    val localUser = com.zegocloud.zimkit.services.ZIMKit.getLocalUser()
+    val readyBlock = {
+        // ✨ jump directly into the 1-on-1 chat
+        ZIMKitRouter.toMessageActivity(
+            context,
+            doctorId,
+            ZIMKitConversationType.ZIMKitConversationTypePeer
+        )
+    }
+
+    if (localUser != null && localUser.id == selfId) {
+        readyBlock()
+    } else {
+        com.zegocloud.zimkit.services.ZIMKit.connectUser(selfId, selfName, selfAvatar) { err ->
+            if (err == null || err.code.value() == 0) {
+                readyBlock()
+            } else {
+                Toast.makeText(context, "Chat login failed: ${err.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+}
+
 
 @Composable
 private fun TabButton(

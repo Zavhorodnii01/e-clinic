@@ -117,7 +117,9 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier) {
         composable("home") { HomeScreen() }
         composable("services") { ServicesScreen(navController = navController) }
         composable("chat") { ChatScreen() }
-        composable("appointments") { AppointmentsScreen(userId = FirebaseAuth.getInstance().currentUser?.uid ?: "") {} }
+        composable("appointments") {
+            AppointmentsScreen(userId = FirebaseAuth.getInstance().currentUser?.uid ?: "") {}
+        }
         composable("profile") { ProfileScreen() }
         composable("settings") { SettingsScreen(onClose = {}) }
 
@@ -125,13 +127,15 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier) {
         composable("appointment_screen/{userId}") { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId") ?: "unknown"
             AppointmentsScreen(userId = userId) {
-                navController.navigate("home") {
-                    popUpTo("appointment_screen/{userId}") { inclusive = true }
-                }
+                // Simply navigate back to the home screen without popping the back stack
+                navController.navigate("home")
             }
         }
+        composable("ai_chat") { AiAssistantChatScreen() }
+
     }
-}@Preview(showBackground = true)
+}
+@Preview(showBackground = true)
 @Composable
 fun PreviewMainScreen() {
     EClinicTheme {
@@ -143,7 +147,6 @@ fun PreviewMainScreen() {
 fun ChatScreen() {
     val context = LocalContext.current
     launchZegoChat(context)
-    //val context = LocalContext.current
     Text("Chat Screen")
 }
 
