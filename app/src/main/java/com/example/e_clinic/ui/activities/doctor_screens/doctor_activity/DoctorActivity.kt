@@ -22,16 +22,14 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -41,7 +39,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -51,7 +48,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,15 +57,10 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.e_clinic.ui.theme.EClinicTheme
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.e_clinic.Firebase.collections.Doctor
-import com.example.e_clinic.Firebase.collections.Prescription
-import com.example.e_clinic.Firebase.storage.uploadPrescriptionToStorage
 import com.example.e_clinic.ZEGOCloud.launchZegoChat
 import com.example.e_clinic.services.functions.appServices
-import com.example.e_clinic.ui.activities.user_screens.user_activity.AppointmentsScreen
-import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
@@ -410,6 +401,8 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier, doctor:
         composable("home") { com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.HomeScreen() }
         composable("chat") { com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.ChatScreen() }
         composable("prescriptions") { com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.PrescribeScreen()}
+        composable("documents") { com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.DocumentScreen(
+        ) }
         composable("profile") { com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.ProfileScreen() }
         composable("settings") {
             com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.SettingsScreen(
@@ -424,6 +417,7 @@ fun BottomNavigationBar(navController: NavHostController) {
         NavigationBarItem(icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") }, selected = false, onClick = { navController.navigate("home") })
         NavigationBarItem(icon = { Icon(Icons.Default.AccountBox, null) }, label = { Text("Chat") }, selected = false, onClick = { navController.navigate("chat") })
         NavigationBarItem(icon = { Icon(Icons.Default.Check, null) }, label = { Text("Prescriptions") }, selected = false, onClick = { navController.navigate("prescriptions") })
+        NavigationBarItem(icon = { Icon(Icons.Default.ShoppingCart, null) }, label = { Text("Documents") }, selected = false, onClick = { navController.navigate("documents") })
         NavigationBarItem(icon = { Icon(Icons.Default.Menu, null) }, label = { Text("Profile") }, selected = false, onClick = { navController.navigate("profile") })
     }
 }

@@ -43,7 +43,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.e_clinic.ZEGOCloud.launchZegoChat
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.example.e_clinic.ui.activities.doctor_screens.ServiceListItem
+import com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.ServiceListItem
 
 
 class UserActivity : ComponentActivity() {

@@ -16,7 +16,11 @@ import java.io.ByteArrayOutputStream
 
 
 
-fun generatePrescription(medication: Drug, dosage: String, quantity: String, prescription: Prescription): ByteArray {
+
+fun generatePrescription(medication: Drug, dosage: String, quantity: String, prescription: Prescription,
+                         doctorName: String,
+                         doctorPhone: String,
+                         patientName: String): ByteArray {
     // Create a larger bitmap for better quality
     val width = 800
     val height = 1200
@@ -66,23 +70,6 @@ fun generatePrescription(medication: Drug, dosage: String, quantity: String, pre
     val dateFormat = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
     val issuedDate = prescription.issued_date?.toDate()?.let { dateFormat.format(it) } ?: "N/A"
 
-    val db = FirebaseFirestore.getInstance()
-    var doctorName = "Loading..."
-    var doctorPhone = "Loading..."
-    var patientName = "Loading..."
-
-    // Fetch doctor details
-    db.collection("doctors").document(prescription.doctor_id).get()
-        .addOnSuccessListener { doc ->
-            doctorName = "${doc.getString("name")} ${doc.getString("surname")}"
-            doctorPhone = doc.getString("phone") ?: "N/A"
-        }
-
-    // Fetch patient details
-    db.collection("users").document(prescription.user_id).get()
-        .addOnSuccessListener { doc ->
-            patientName = "${doc.getString("name")} ${doc.getString("surname")}"
-        }
 
     // Doctor and patient info
 
@@ -90,14 +77,14 @@ fun generatePrescription(medication: Drug, dosage: String, quantity: String, pre
     canvas.drawText("Phone Number: $doctorPhone", 50f, 180f, mainPaint)
     canvas.drawText("Date of Issue: $issuedDate", width - 250f, 150f, mainPaint)
 
-    canvas.drawText("Pacjent: $patientName", 50f, 220f, mainPaint)
+    canvas.drawText("Patient: $patientName", 50f, 220f, mainPaint)
 
     // Medication details
     canvas.drawText("Drug name: ${medication.name}+${medication.typeOfPrescription}", 50f, 300f, boldPaint)
     canvas.drawText("Active substance: ${medication.activeSubstance}", 50f, 340f, mainPaint)
     canvas.drawText("Dosage: ${dosage}", 50f, 370f, mainPaint)
     canvas.drawText("Quantity: ${quantity}", 50f, 400f, mainPaint)
-    canvas.drawText("Form: ${medication.form}", 50f, 400f, mainPaint)
+    canvas.drawText("Form: ${medication.form}", 50f, 430f, mainPaint)
 
     // Instructions
     canvas.drawText("Instructions: " + prescription.doctor_comment, 50f, 480f, mainPaint)
@@ -143,46 +130,141 @@ fun generatePrescription(medication: Drug, dosage: String, quantity: String, pre
     return stream.toByteArray()
 }
 
-fun uploadPrescriptionToStorage(prescription: Prescription, dosage: String,quantity: String, medication: Drug) {
-    val byteArray = generatePrescription(medication, dosage, quantity, prescription)
+fun uploadPrescriptionToStorage(prescription: Prescription, dosage: String,quantity: String, medication: Drug){
 
-    val storageRef = FirebaseStorage.getInstance().reference
-    val fileName = "${prescription.id}_${System.currentTimeMillis()}.png"
-    val photoRef = storageRef.child("prescriptions/$fileName")
+    // Get user and doctor names
+    val userId = prescription.user_id ?: "UnknownUser"
+    val doctorId = prescription.doctor_id ?: "UnknownDoctor"
 
-    photoRef.putBytes(byteArray).addOnSuccessListener { uploadTask ->
-        photoRef.downloadUrl.addOnSuccessListener { uri ->
-            // 1. Get Firestore instance
-            val db = FirebaseFirestore.getInstance()
+    getUserName(userId) { patientName ->
+        getDoctorName(doctorId) { doctorName ->
+            getDoctorPhone(doctorId) { doctorPhone ->
+                val byteArray = generatePrescription(medication, dosage, quantity, prescription, doctorName, doctorPhone, patientName)
+                val storageRef = FirebaseStorage.getInstance().reference
+                val fileName = "${prescription.id}_${System.currentTimeMillis()}.png"
+                val photoRef = storageRef.child("prescriptions/$fileName")
 
-            // 2. Create a batch operation
-            val batch = db.batch()
+                photoRef.putBytes(byteArray).addOnSuccessListener { uploadTask ->
+                    photoRef.downloadUrl.addOnSuccessListener { uri ->
+                        // 1. Get Firestore instance
+                        val db = FirebaseFirestore.getInstance()
 
-            // 3. Create a new document reference
-            val prescriptionRef = db.collection("prescriptions").document() // Auto-generate ID
+                        // 2. Create a batch operation
+                        val batch = db.batch()
 
-            // 4. Update the prescription object with the URL
-            prescription.link_to_storage = uri.toString()
+                        // 3. Create a new document reference
+                        val prescriptionRef = db.collection("prescriptions").document() // Auto-generate ID
 
-            // 5. Add the set() operation to the batch
-            batch.set(prescriptionRef, prescription)
+                        // 4. Update the prescription object with the URL
+                        prescription.link_to_storage = uri.toString()
 
-            // 6. Commit the batch
-            batch.commit().addOnSuccessListener {
-                println("Success: Prescription and photo stored!")
-            }.addOnFailureListener { e ->
-                println("Failed to save prescription: ${e.message}")
-                // Optional: Delete the uploaded photo if Firestore fails
-                photoRef.delete()
+                        // 5. Add the set() operation to the batch
+                        batch.set(prescriptionRef, prescription)
+
+                        // 6. Commit the batch
+                        batch.commit().addOnSuccessListener {
+                            println("Success: Prescription and photo stored!")
+                        }.addOnFailureListener { e ->
+                            println("Failed to save prescription: ${e.message}")
+                            // Optional: Delete the uploaded photo if Firestore fails
+                            photoRef.delete()
+                        }
+                    }
+                }.addOnFailureListener { e ->
+                    println("Failed to upload photo: ${e.message}")
+                }
             }
         }
-    }.addOnFailureListener { e ->
-        println("Failed to upload photo: ${e.message}")
     }
+
+
+    //val byteArray = generatePrescription(medication, dosage, quantity, prescription, doctorName, doctorPhone, patientName)
+
+//    val storageRef = FirebaseStorage.getInstance().reference
+//    val fileName = "${prescription.id}_${System.currentTimeMillis()}.png"
+//    val photoRef = storageRef.child("prescriptions/$fileName")
+//
+//    photoRef.putBytes(byteArray).addOnSuccessListener { uploadTask ->
+//        photoRef.downloadUrl.addOnSuccessListener { uri ->
+//            // 1. Get Firestore instance
+//            val db = FirebaseFirestore.getInstance()
+//
+//            // 2. Create a batch operation
+//            val batch = db.batch()
+//
+//            // 3. Create a new document reference
+//            val prescriptionRef = db.collection("prescriptions").document() // Auto-generate ID
+//
+//            // 4. Update the prescription object with the URL
+//            prescription.link_to_storage = uri.toString()
+//
+//            // 5. Add the set() operation to the batch
+//            batch.set(prescriptionRef, prescription)
+//
+//            // 6. Commit the batch
+//            batch.commit().addOnSuccessListener {
+//                println("Success: Prescription and photo stored!")
+//            }.addOnFailureListener { e ->
+//                println("Failed to save prescription: ${e.message}")
+//                // Optional: Delete the uploaded photo if Firestore fails
+//                photoRef.delete()
+//            }
+//        }
+//    }.addOnFailureListener { e ->
+//        println("Failed to upload photo: ${e.message}")
+//    }
 }
 
 
 
+private fun getUserName(userId: String, callback: (String) -> Unit) {
+    val db = FirebaseFirestore.getInstance()
+    db.collection("users").document(userId).get()
+        .addOnSuccessListener { document ->
+            if (document != null && document.exists()) {
+                val name = document.getString("name") ?: "Unknown User"
+                val surname = document.getString("surname") ?: "User"
+                callback("$name $surname")
+            } else {
+                callback("Unknown User")
+            }
+        }
+        .addOnFailureListener {
+            callback("Unknown User")
+        }
+}
+
+private fun getDoctorName(doctorId: String, callback: (String) -> Unit) {
+    val db = FirebaseFirestore.getInstance()
+    db.collection("doctors").document(doctorId).get()
+        .addOnSuccessListener { document ->
+            if (document != null && document.exists()) {
+                val name = "${document.getString("name")} ${document.getString("surname")}"
+                callback(name)
+            } else {
+                callback("Unknown Doctor")
+            }
+        }
+        .addOnFailureListener {
+            callback("Unknown Doctor")
+        }
+}
+
+private fun getDoctorPhone(doctorId: String, callback: (String) -> Unit) {
+    val db = FirebaseFirestore.getInstance()
+    db.collection("doctors").document(doctorId).get()
+        .addOnSuccessListener { document ->
+            if (document != null && document.exists()) {
+                val phone = document.getString("phone") ?: "N/A"
+                callback(phone)
+            } else {
+                callback("N/A")
+            }
+        }
+        .addOnFailureListener {
+            callback("N/A")
+        }
+}
 
 // Example usage (in an Activity or Fragment, after you have width and height):
 //val prescriptionBytes = PrescriptionGenerator.generatePrescription(viewWidth, viewHeight)

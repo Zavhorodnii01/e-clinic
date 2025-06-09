@@ -93,6 +93,7 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-storage-ktx")
     implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.zxing:core:3.5.1")
 
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:20.7.0")
@@ -114,6 +115,7 @@ dependencies {
     implementation(libs.firebase.appcheck.debug)
     implementation(libs.androidx.datastore.core.android)
     implementation(libs.generativeai)
+    implementation("io.coil-kt:coil-compose:2.4.0")
 
     // Testy
     testImplementation(libs.junit)

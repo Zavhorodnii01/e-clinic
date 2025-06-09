@@ -10,10 +10,10 @@
       </SelectionState>
       <SelectionState runConfigName="DoctorLogInActivity">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-06-08T10:00:05.367585800Z">
+        <DropdownSelection timestamp="2025-06-09T08:36:40.504531Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\38099\.android\avd\Pixel_9_API_35.avd" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=/Users/jakubgruszka/.android/avd/Pixel_8a.avd" />
             </handle>
           </Target>
         </DropdownSelection>
