@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -115,7 +116,8 @@ fun MainScreen() {
 fun NavigationHost(navController: NavHostController, modifier: Modifier) {
     NavHost(navController = navController, startDestination = "home", modifier = modifier) {
         composable("home") { HomeScreen() }
-        composable("services") { ServicesScreen(navController = navController) }
+     //   composable("services") { ServicesScreen(navController = navController) }
+        composable("documents") { DocumentScreen() }
         composable("chat") { ChatScreen() }
         composable("appointments") {
             AppointmentsScreen(userId = FirebaseAuth.getInstance().currentUser?.uid ?: "") {}
@@ -180,9 +182,10 @@ fun ServicesSection(services: List<Service>, onServiceClick: (Service) -> Unit) 
 fun BottomNavigationBar(navController: NavHostController) {
     NavigationBar {
         NavigationBarItem(icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") }, selected = false, onClick = { navController.navigate("home") })
-        NavigationBarItem(icon = { Icon(Icons.Default.List, null) }, label = { Text("Services") }, selected = false, onClick = { navController.navigate("services") })
+//        NavigationBarItem(icon = { Icon(Icons.Default.List, null) }, label = { Text("Services") }, selected = false, onClick = { navController.navigate("services") })
         NavigationBarItem(icon = { Icon(Icons.Default.AccountBox, null) }, label = { Text("Chat") }, selected = false, onClick = { navController.navigate("chat") })
         NavigationBarItem(icon = { Icon(Icons.Default.Check, null) }, label = { Text("Appointments") }, selected = false, onClick = { navController.navigate("appointments") })
+        NavigationBarItem(icon = { Icon(Icons.Default.ShoppingCart, null) }, label = { Text("Documents") }, selected = false, onClick = { navController.navigate("documents") })
         NavigationBarItem(icon = { Icon(Icons.Default.Menu, null) }, label = { Text("Profile") }, selected = false, onClick = { navController.navigate("profile") })
     }
 }
