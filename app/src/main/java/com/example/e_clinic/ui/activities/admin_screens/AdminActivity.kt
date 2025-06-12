@@ -45,6 +45,33 @@ class AdminActivity : ComponentActivity() {
         }
     }
 }
+private fun generateTimeSlots(date: LocalDate, start: String, end: String): List<Timestamp> {
+    val slots = mutableListOf<Timestamp>()
+    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+    val startTime = LocalTime.parse(start, timeFormatter)
+    val endTime = LocalTime.parse(end, timeFormatter)
+
+    var currentTime = startTime
+
+    while (currentTime.isBefore(endTime)) {
+        val dateTime = LocalDateTime.of(date, currentTime)
+        val instant = dateTime.atZone(ZoneId.systemDefault()).toInstant()
+        // Create Timestamp using seconds and nanoseconds
+        val timestamp = Timestamp(instant.epochSecond, instant.nano)
+        slots.add(timestamp)
+        currentTime = currentTime.plusMinutes(20)
+    }
+
+    return slots
+}
+
+
+private fun validateTimeInput(start: String, end: String): Boolean {
+    val timePattern = Pattern.compile("^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$")
+    return timePattern.matcher(start).matches() && timePattern.matcher(end).matches()
+}
+
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
@@ -330,6 +357,7 @@ fun ManageTimeslotsScreen() {
     val dateDialogState = rememberMaterialDialogState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    var timeSlots by remember { mutableStateOf<List<TimeSlot>>(emptyList()) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -392,7 +420,7 @@ fun ManageTimeslotsScreen() {
 
                         val timeSlot = TimeSlot(
                             doctor_id = doctorId,
-                            specializations = specialization,
+                            specialization = specialization,
                             available_slots = slots
                         )
 
@@ -467,31 +495,6 @@ LazyColumn {
         }
     }
 }
-
-
-private fun generateTimeSlots(date: LocalDate, start: String, end: String): List<Timestamp> {
-    val slots = mutableListOf<Timestamp>()
-    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-
-    val startTime = LocalTime.parse(start, timeFormatter)
-    val endTime = LocalTime.parse(end, timeFormatter)
-
-    var currentTime = startTime
-
-    while (currentTime.isBefore(endTime)) {
-        val dateTime = LocalDateTime.of(date, currentTime)
-        val instant = dateTime.atZone(ZoneId.systemDefault()).toInstant()
-        // Create Timestamp using seconds and nanoseconds
-        val timestamp = Timestamp(instant.epochSecond, instant.nano)
-        slots.add(timestamp)
-        currentTime = currentTime.plusMinutes(20)
-    }
-
-    return slots
 }
 
 
-private fun validateTimeInput(start: String, end: String): Boolean {
-    val timePattern = Pattern.compile("^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$")
-    return timePattern.matcher(start).matches() && timePattern.matcher(end).matches()
-}

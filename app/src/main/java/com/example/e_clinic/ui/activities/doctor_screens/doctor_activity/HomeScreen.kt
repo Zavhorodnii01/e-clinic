@@ -228,11 +228,6 @@ fun DoctorAppointmentCalendar(
                 }
             }
         }
-
     }
-
-
-
-
 }
 
