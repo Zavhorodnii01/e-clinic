@@ -3,7 +3,6 @@ package com.example.e_clinic.ui.activities.admin_screens
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,7 +15,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -27,14 +25,11 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.rememberPagerState
 import com.google.firebase.Timestamp
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import java.time.LocalDate
-import java.time.LocalTime
+import java.time.*
 import java.time.format.DateTimeFormatter
-import java.util.Calendar
 import java.util.regex.Pattern
 import com.vanpra.composematerialdialogs.MaterialDialog
 import com.vanpra.composematerialdialogs.datetime.date.datepicker
@@ -88,8 +83,6 @@ fun AdminActivityScreen() {
 fun ManageDoctorsScreen() {
     var specialization by remember { mutableStateOf("") }
     var doctorEmail by remember { mutableStateOf("") }
-    var tempPassword by remember { mutableStateOf("") }
-    // ADDED: Name and surname fields
     var doctorName by remember { mutableStateOf("") }
     var doctorSurname by remember { mutableStateOf("") }
     var doctors by remember { mutableStateOf<List<Doctor>>(emptyList()) }
@@ -122,7 +115,6 @@ fun ManageDoctorsScreen() {
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).padding(16.dp)) {
-            // ADDED: Name and surname input fields
             OutlinedTextField(
                 value = doctorName,
                 onValueChange = { doctorName = it },
@@ -154,54 +146,56 @@ fun ManageDoctorsScreen() {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
             )
 
-            OutlinedTextField(
-                value = tempPassword,
-                onValueChange = { tempPassword = it },
-                label = { Text("Temporary Password") },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-            )
-
             Button(
                 onClick = {
-                    FirebaseAuth.getInstance()
-                        .createUserWithEmailAndPassword(doctorEmail, tempPassword)
-                        .addOnSuccessListener {
-                            val doctor = Doctor(
-                                e_mail = doctorEmail,
-                                specialization = specialization,
-                                name = doctorName, // ADDED: Include name
-                                surname = doctorSurname // ADDED: Include surname
-                            )
-                            FirebaseFirestore.getInstance()
-                                .collection("doctors")
-                                .add(doctor)
-                                .addOnSuccessListener {
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar("Doctor added successfully")
-                                    }
-                                    // Clear all fields after success
-                                    doctorEmail = ""
-                                    tempPassword = ""
-                                    doctorName = ""
-                                    doctorSurname = ""
-                                    specialization = ""
+                    if (doctorName.isNotEmpty() && doctorSurname.isNotEmpty() && doctorEmail.isNotEmpty() && specialization.isNotEmpty()) {
+                        val doctor = Doctor(
+                            name = doctorName,
+                            surname = doctorSurname,
+                            email = doctorEmail,
+                            specialization = specialization,
+                            address = "",
+                            education = "",
+                            experience = "",
+                            gender = "",
+                            phone = ""
+                        )
+
+                        FirebaseFirestore.getInstance()
+                            .collection("doctors")
+                            .add(doctor)
+                            .addOnSuccessListener {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Doctor added successfully")
                                 }
-                        }
-                        .addOnFailureListener {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Error adding doctor: ${it.message}")
+                                // Reset fields
+                                doctorName = ""
+                                doctorSurname = ""
+                                doctorEmail = ""
+                                specialization = ""
                             }
+                            .addOnFailureListener { e ->
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Error adding doctor: ${e.message}")
+                                }
+                            }
+                    } else {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Please fill all fields")
                         }
+                    }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Add Doctor", textAlign = TextAlign.Center)
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
             LazyColumn {
                 items(doctors) { doctor ->
-                    DoctorItem(doctor,
+                    DoctorItem(
+                        doctor = doctor,
                         onEdit = {
                             selectedDoctor = doctor
                             showEditDialog = true
@@ -225,8 +219,7 @@ fun ManageDoctorsScreen() {
 
     if (showEditDialog && selectedDoctor != null) {
         var editSpecialization by remember { mutableStateOf(selectedDoctor!!.specialization) }
-        var editEmail by remember { mutableStateOf(selectedDoctor!!.e_mail) }
-        // ADDED: Name and surname fields for editing
+        var editEmail by remember { mutableStateOf(selectedDoctor!!.email) }
         var editName by remember { mutableStateOf(selectedDoctor!!.name) }
         var editSurname by remember { mutableStateOf(selectedDoctor!!.surname) }
 
@@ -235,7 +228,6 @@ fun ManageDoctorsScreen() {
             title = { Text("Edit Doctor") },
             text = {
                 Column {
-                    // ADDED: Name and surname fields
                     OutlinedTextField(
                         value = editName,
                         onValueChange = { editName = it },
@@ -275,8 +267,8 @@ fun ManageDoctorsScreen() {
                             mapOf(
                                 "e_mail" to editEmail,
                                 "specialization" to editSpecialization,
-                                "name" to editName, // ADDED: Update name
-                                "surname" to editSurname // ADDED: Update surname
+                                "name" to editName,
+                                "surname" to editSurname
                             )
                         )
                         .addOnSuccessListener {
@@ -304,7 +296,7 @@ fun DoctorItem(doctor: Doctor, onEdit: () -> Unit, onDelete: () -> Unit) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("${doctor.name} ${doctor.surname}")
             Text(doctor.specialization)
-            Text(doctor.e_mail)
+            Text(doctor.email)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -330,248 +322,146 @@ fun DoctorItem(doctor: Doctor, onEdit: () -> Unit, onDelete: () -> Unit) {
 
 @Composable
 fun ManageTimeslotsScreen() {
-    var selectedSpecialization by remember { mutableStateOf("") }
-    var selectedDoctorId by remember { mutableStateOf("") }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-    var timeRanges by remember { mutableStateOf(listOf<String>()) }
-    var newTimeRange by remember { mutableStateOf("") }
-    var doctors by remember { mutableStateOf<List<Doctor>>(emptyList()) }
-    var timeSlots by remember { mutableStateOf<List<TimeSlot>>(emptyList()) }
+    var startTime by remember { mutableStateOf("") }
+    var endTime by remember { mutableStateOf("") }
+    var doctorId by remember { mutableStateOf("") }
+    var specialization by remember { mutableStateOf("") }
     val dateDialogState = rememberMaterialDialogState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy")
-
-    LaunchedEffect(selectedSpecialization) {
-        val snapshot = if (selectedSpecialization.isNotEmpty()) {
-            FirebaseFirestore.getInstance()
-                .collection("doctors")
-                .whereEqualTo("specialization", selectedSpecialization)
-                .get()
-                .await()
-        } else {
-            FirebaseFirestore.getInstance()
-                .collection("doctors")
-                .get()
-                .await()
-        }
-        doctors = snapshot.documents.map {
-            val doc = it.toObject(Doctor::class.java)!!
-            doc.id = it.id
-            doc
-        }
-    }
-
-    LaunchedEffect(selectedDoctorId, selectedDate) {
-        if (selectedDoctorId.isNotEmpty()) {
-            val calendar = Calendar.getInstance()
-            calendar.set(selectedDate.year, selectedDate.monthValue - 1, selectedDate.dayOfMonth, 0, 0)
-            val startOfDay = Timestamp(calendar.time)
-
-            calendar.add(Calendar.DAY_OF_MONTH, 1)
-            val endOfDay = Timestamp(calendar.time)
-
-            val snapshot = FirebaseFirestore.getInstance()
-                .collection("timeslots")
-                .whereEqualTo("doctorId", selectedDoctorId)
-                .whereGreaterThanOrEqualTo("date", startOfDay)
-                .whereLessThan("date", endOfDay)
-                .get()
-                .await()
-
-            timeSlots = snapshot.documents.map {
-                val slot = it.toObject(TimeSlot::class.java)!!
-                slot.id = it.id
-                slot
-            }
-        }
-    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .padding(16.dp)
+                .fillMaxSize()
+        ) {
+            // Date Picker
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Date: ${selectedDate.format(DateTimeFormatter.ISO_DATE)}")
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = { dateDialogState.show() }) {
+                    Text("Select Date")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Time Inputs
             OutlinedTextField(
-                value = selectedSpecialization,
-                onValueChange = {
-                    selectedSpecialization = it
-                    selectedDoctorId = ""
-                },
+                value = startTime,
+                onValueChange = { startTime = it },
+                label = { Text("Start Time (HH:mm)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = endTime,
+                onValueChange = { endTime = it },
+                label = { Text("End Time (HH:mm)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Doctor and Specialization
+            OutlinedTextField(
+                value = doctorId,
+                onValueChange = { doctorId = it },
+                label = { Text("Doctor ID") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = specialization,
+                onValueChange = { specialization = it },
                 label = { Text("Specialization") },
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            var expanded by remember { mutableStateOf(false) }
-            Box {
-                OutlinedTextField(
-                    value = doctors.find { it.id == selectedDoctorId }?.let {
-                        "${it.name} (${it.specialization})"
-                    } ?: "Select Doctor",
-                    onValueChange = {},
-                    readOnly = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { expanded = true }
-                )
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    doctors.forEach { doctor ->
-                        DropdownMenuItem(
-                            text = { Text("${doctor.name} (${doctor.specialization})") },
-                            onClick = {
-                                selectedDoctorId = doctor.id
-                                expanded = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(onClick = { dateDialogState.show() }) {
-                Text("Date: ${selectedDate.format(dateFormatter)}")
-            }
-
-            MaterialDialog(
-                dialogState = dateDialogState,
-                buttons = {
-                    positiveButton("OK")
-                    negativeButton("Cancel")
-                }
-            ) {
-                datepicker { date -> selectedDate = date }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text("Add Time Ranges:", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                OutlinedTextField(
-                    value = newTimeRange,
-                    onValueChange = { newTimeRange = it },
-                    label = { Text("e.g. 10:00-14:00") },
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = {
-                    val pattern = Pattern.compile("^([01]?\\d|2[0-3]):[0-5]\\d-([01]?\\d|2[0-3]):[0-5]\\d$")
-                    if (pattern.matcher(newTimeRange).matches()) {
-                        timeRanges = timeRanges + newTimeRange
-                        newTimeRange = ""
-                    }
-                }) {
-                    Text("Add")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            LazyColumn {
-                items(timeRanges) { range ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(range, modifier = Modifier.weight(1f))
-                        IconButton(onClick = {
-                            timeRanges = timeRanges - range
-                        }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Remove", tint = Color.Red)
-                        }
-                    }
-                }
-            }
-
             Button(
                 onClick = {
-                    if (selectedDoctorId.isNotEmpty()) {
-                        generateTimeSlots(
-                            doctorId = selectedDoctorId,
-                            date = selectedDate,
-                            ranges = timeRanges.map { it.split("-") }
+                    if (validateTimeInput(startTime, endTime) && doctorId.isNotEmpty() && specialization.isNotEmpty()) {
+                        val slots = generateTimeSlots(selectedDate, startTime, endTime)
+
+                        val timeSlot = TimeSlot(
+                            doctor_id = doctorId,
+                            specializations = specialization,
+                            available_slots = slots
                         )
-                        scope.launch {
-                            snackbarHostState.showSnackbar("Time slots added successfully")
-                        }
-                        timeRanges = emptyList()
+
+                        // ✅ Updated Firestore write logic
+                        FirebaseFirestore.getInstance()
+                            .collection("timeslots")
+                            .add(timeSlot)
+                            .addOnSuccessListener {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Timeslots added successfully")
+                                }
+                                startTime = ""
+                                endTime = ""
+                            }
+                            .addOnFailureListener { e ->
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Error adding timeslots: ${e.message}")
+                                }
+                            }
                     } else {
                         scope.launch {
-                            snackbarHostState.showSnackbar("Please select a doctor")
+                            snackbarHostState.showSnackbar("Please fill all fields correctly")
                         }
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Generate Slots")
+                Text("Generate Timeslots")
             }
+        }
+    }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text("Existing Time Slots:", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            LazyColumn {
-                items(timeSlots) { slot ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("${slot.startTime} - ${slot.endTime}")
-                        IconButton(onClick = {
-                            FirebaseFirestore.getInstance()
-                                .collection("timeslots")
-                                .document(slot.id)
-                                .delete()
-                                .addOnSuccessListener {
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar("Time slot removed")
-                                    }
-                                }
-                        }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
-                        }
-                    }
-                }
-            }
+    MaterialDialog(
+        dialogState = dateDialogState,
+        buttons = {
+            positiveButton("Ok")
+            negativeButton("Cancel")
+        }
+    ) {
+        datepicker { date ->
+            selectedDate = date
         }
     }
 }
 
-fun generateTimeSlots(doctorId: String, date: LocalDate, ranges: List<List<String>>) {
-    val db = FirebaseFirestore.getInstance()
-    val calendar = Calendar.getInstance()
 
-    ranges.forEach { range ->
-        val start = LocalTime.parse(range[0])
-        val end = LocalTime.parse(range[1])
-        var current = start
+private fun generateTimeSlots(date: LocalDate, start: String, end: String): List<Timestamp> {
+    val slots = mutableListOf<Timestamp>()
+    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
-        while (current.isBefore(end)) {
-            val slotEnd = current.plusMinutes(20)
-            if (slotEnd.isAfter(end)) break
+    val startTime = LocalTime.parse(start, timeFormatter)
+    val endTime = LocalTime.parse(end, timeFormatter)
 
-            calendar.set(date.year, date.monthValue - 1, date.dayOfMonth,
-                current.hour, current.minute)
-            val timestamp = Timestamp(calendar.time)
+    var currentTime = startTime
 
-            val slot = hashMapOf(
-                "doctorId" to doctorId,
-                "date" to timestamp,
-                "startTime" to current.toString(),
-                "endTime" to slotEnd.toString(),
-                "isBooked" to false
-            )
-
-            db.collection("timeslots").add(slot)
-            current = slotEnd
-        }
+    while (currentTime.isBefore(endTime)) {
+        val dateTime = LocalDateTime.of(date, currentTime)
+        val instant = dateTime.atZone(ZoneId.systemDefault()).toInstant()
+        // Create Timestamp using seconds and nanoseconds
+        val timestamp = Timestamp(instant.epochSecond, instant.nano)
+        slots.add(timestamp)
+        currentTime = currentTime.plusMinutes(20)
     }
+
+    return slots
 }
-//it needs to be registeted in the back end as an admin so it need to be set manually on computer
+
+
+private fun validateTimeInput(start: String, end: String): Boolean {
+    val timePattern = Pattern.compile("^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$")
+    return timePattern.matcher(start).matches() && timePattern.matcher(end).matches()
+}

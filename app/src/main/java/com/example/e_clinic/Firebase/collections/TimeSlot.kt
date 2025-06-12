@@ -11,8 +11,5 @@ data class TimeSlot(
 //    val specializations: List<String> = emptyList(),
     val available_slots: List<Timestamp> = emptyList(),
 
-    val startTime: String = "",
-    val endTime: String = "",
-    val date: Timestamp? = null,
-    val isBooked: Boolean = false
+
 )
