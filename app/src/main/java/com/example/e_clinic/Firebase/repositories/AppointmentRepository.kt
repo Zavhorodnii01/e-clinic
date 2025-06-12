@@ -19,4 +19,11 @@ class AppointmentRepository {
                 onSuccess(result.toObjects(Appointment::class.java))
             }
     }
+
+    fun getAppointmentsForDoctor(doctorId: String, onSuccess: (List<Appointment>) -> Unit) {
+        collection.whereEqualTo("doctor_id", doctorId).get()
+            .addOnSuccessListener { result ->
+                onSuccess(result.toObjects(Appointment::class.java))
+            }
+    }
 }

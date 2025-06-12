@@ -32,8 +32,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -52,6 +50,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.DoctorActivity
 //import com.example.e_clinic.ui.activities.doctor_screens.DoctorLogInActivity
 import com.example.e_clinic.ui.theme.EClinicTheme
 import com.google.firebase.auth.FirebaseAuth

@@ -425,15 +425,45 @@ fun ManageTimeslotsScreen() {
         }
     }
 
-    MaterialDialog(
-        dialogState = dateDialogState,
-        buttons = {
-            positiveButton("Ok")
-            negativeButton("Cancel")
-        }
-    ) {
-        datepicker { date ->
-            selectedDate = date
+MaterialDialog(
+    dialogState = dateDialogState,
+    buttons = {
+        positiveButton("Ok")
+        negativeButton("Cancel")
+    }
+) {
+    datepicker { date ->
+        selectedDate = date
+    }
+}
+
+Spacer(modifier = Modifier.height(24.dp))
+
+Text("Existing Time Slots:", style = MaterialTheme.typography.titleMedium)
+Spacer(modifier = Modifier.height(8.dp))
+
+LazyColumn {
+    items(timeSlots) { slot ->
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            IconButton(onClick = {
+                FirebaseFirestore.getInstance()
+                    .collection("timeslots")
+                    .document(slot.id)
+                    .delete()
+                    .addOnSuccessListener {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Time slot removed")
+                        }
+                    }
+            }) {
+                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
+            }
         }
     }
 }

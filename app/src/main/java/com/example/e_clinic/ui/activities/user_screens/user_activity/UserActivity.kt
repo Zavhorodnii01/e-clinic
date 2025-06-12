@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -43,7 +44,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.e_clinic.ZEGOCloud.launchZegoChat
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.example.e_clinic.ui.activities.doctor_screens.ServiceListItem
+import com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.ServiceListItem
 
 
 class UserActivity : ComponentActivity() {
@@ -115,9 +116,12 @@ fun MainScreen() {
 fun NavigationHost(navController: NavHostController, modifier: Modifier) {
     NavHost(navController = navController, startDestination = "home", modifier = modifier) {
         composable("home") { HomeScreen() }
-        composable("services") { ServicesScreen(navController = navController) }
+     //   composable("services") { ServicesScreen(navController = navController) }
+        composable("documents") { DocumentScreen() }
         composable("chat") { ChatScreen() }
-        composable("appointments") { AppointmentsScreen(userId = FirebaseAuth.getInstance().currentUser?.uid ?: "") {} }
+        composable("appointments") {
+            AppointmentsScreen(userId = FirebaseAuth.getInstance().currentUser?.uid ?: "") {}
+        }
         composable("profile") { ProfileScreen() }
         composable("settings") { SettingsScreen(onClose = {}) }
 
@@ -125,13 +129,15 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier) {
         composable("appointment_screen/{userId}") { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId") ?: "unknown"
             AppointmentsScreen(userId = userId) {
-                navController.navigate("home") {
-                    popUpTo("appointment_screen/{userId}") { inclusive = true }
-                }
+                // Simply navigate back to the home screen without popping the back stack
+                navController.navigate("home")
             }
         }
+        composable("ai_chat") { AiAssistantChatScreen() }
+
     }
-}@Preview(showBackground = true)
+}
+@Preview(showBackground = true)
 @Composable
 fun PreviewMainScreen() {
     EClinicTheme {
@@ -143,7 +149,6 @@ fun PreviewMainScreen() {
 fun ChatScreen() {
     val context = LocalContext.current
     launchZegoChat(context)
-    //val context = LocalContext.current
     Text("Chat Screen")
 }
 
@@ -177,9 +182,10 @@ fun ServicesSection(services: List<Service>, onServiceClick: (Service) -> Unit) 
 fun BottomNavigationBar(navController: NavHostController) {
     NavigationBar {
         NavigationBarItem(icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") }, selected = false, onClick = { navController.navigate("home") })
-        NavigationBarItem(icon = { Icon(Icons.Default.List, null) }, label = { Text("Services") }, selected = false, onClick = { navController.navigate("services") })
+//        NavigationBarItem(icon = { Icon(Icons.Default.List, null) }, label = { Text("Services") }, selected = false, onClick = { navController.navigate("services") })
         NavigationBarItem(icon = { Icon(Icons.Default.AccountBox, null) }, label = { Text("Chat") }, selected = false, onClick = { navController.navigate("chat") })
         NavigationBarItem(icon = { Icon(Icons.Default.Check, null) }, label = { Text("Appointments") }, selected = false, onClick = { navController.navigate("appointments") })
+        NavigationBarItem(icon = { Icon(Icons.Default.ShoppingCart, null) }, label = { Text("Documents") }, selected = false, onClick = { navController.navigate("documents") })
         NavigationBarItem(icon = { Icon(Icons.Default.Menu, null) }, label = { Text("Profile") }, selected = false, onClick = { navController.navigate("profile") })
     }
 }
