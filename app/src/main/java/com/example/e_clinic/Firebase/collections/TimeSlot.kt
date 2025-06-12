@@ -7,6 +7,9 @@ data class TimeSlot(
     @DocumentId
     var id: String = "",
     val doctor_id: String = "",
-    val specialization: String = "",
-    val available_slots: List<Timestamp> = emptyList()
+    val specializations: String = "",
+//    val specializations: List<String> = emptyList(),
+    val available_slots: List<Timestamp> = emptyList(),
+
+
 )
