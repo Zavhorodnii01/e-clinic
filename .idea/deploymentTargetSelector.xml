@@ -8,7 +8,10 @@
       <SelectionState runConfigName="DoctorActivity">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="DoctorLogInActivity">
+      <SelectionState runConfigName="AdminLogInActivity (1)">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="AdminLogInActivity">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2025-06-09T08:36:40.504531Z">
           <Target type="DEFAULT_BOOT">

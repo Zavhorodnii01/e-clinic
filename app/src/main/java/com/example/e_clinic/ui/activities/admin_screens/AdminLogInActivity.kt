@@ -16,9 +16,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.e_clinic.ui.theme.EClinicTheme
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.firestore.ktx.firestore
 
 class AdminLogInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,6 +39,7 @@ fun AdminLoginScreen() {
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val auth = Firebase.auth
+    val db = Firebase.firestore
 
     Column(
         modifier = Modifier
@@ -96,23 +97,29 @@ fun AdminLoginScreen() {
                     .addOnCompleteListener { task ->
                         isLoading = false
                         if (task.isSuccessful) {
-                            // Check if user is admin
                             val user = auth.currentUser
-                            user?.getIdToken(true)?.addOnCompleteListener { tokenTask ->
-                                if (tokenTask.isSuccessful) {
-                                    val isAdmin = tokenTask.result?.claims?.get("admin") as? Boolean
-                                    if (isAdmin == true) {
-                                        context.startActivity(
-                                            Intent(context, AdminActivity::class.java)
-                                        )
-                                        (context as? ComponentActivity)?.finish()
-                                    } else {
-                                        errorMessage = "Access denied: Admin privileges required"
+                            val uid = user?.uid
+
+                            if (uid != null) {
+                                db.collection("administrators").document(uid).get()
+                                    .addOnSuccessListener { document ->
+                                        val role = document.getString("role")
+                                        if (document.exists() && role == "admin") {
+                                            context.startActivity(
+                                                Intent(context, AdminActivity::class.java)
+                                            )
+                                            (context as? ComponentActivity)?.finish()
+                                        } else {
+                                            errorMessage = "Access denied: Admin privileges required"
+                                            auth.signOut()
+                                        }
+                                    }
+                                    .addOnFailureListener { e ->
+                                        errorMessage = "Failed to verify admin: ${e.message}"
                                         auth.signOut()
                                     }
-                                } else {
-                                    errorMessage = "Authentication failed: ${task.exception?.message}"
-                                }
+                            } else {
+                                errorMessage = "Authentication error: Missing UID"
                             }
                         } else {
                             errorMessage = "Login failed: ${task.exception?.message}"
@@ -134,4 +141,3 @@ fun AdminLoginScreen() {
         }
     }
 }
-////it needs to be registeted in the back end as an admin so it need to be set manually on computer
