@@ -1,4 +1,4 @@
-package com.example.e_clinic.ui.activities.user_screens.user_activity
+package com.example.e_clinic.ui.activities.doctor_screens.doctor_activity
 
 import android.content.Context
 import androidx.compose.foundation.clickable
@@ -20,7 +20,7 @@ import com.google.firebase.auth.FirebaseAuth
 @Composable
 fun ServicesScreen(navController: NavHostController) {
     val context = LocalContext.current
-    val services: List<Service> = appServices()
+    val services = doctorServices()
     val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     LazyColumn(
@@ -33,25 +33,9 @@ fun ServicesScreen(navController: NavHostController) {
                     .fillMaxWidth()
                     .clickable {
                         when (service.name) {
-                            "My Appointments" -> {
-                                navController.navigate("appointment_screen/$userId")
-                            }
-
-                            "Chat with Doctor" -> {
-                                launchZegoChat(context)
-                            }
-
-                            "Chat with AI Assistant" -> {
-                                navController.navigate("ai_chat")
-                            }
-
-                            "My Prescriptions" -> {
-                                navController.navigate("documents")
-                            }
-
-                            else -> {
-                                // Handle any additional services here
-                            }
+                            "Appointments" -> navController.navigate("appointment_screen/$userId")
+                            "Chat with Patients" -> launchZegoChat(context)
+                            "New Prescription" -> navController.navigate("prescriptions")
                         }
                     }
             ) {

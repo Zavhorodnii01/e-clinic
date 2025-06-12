@@ -18,7 +18,9 @@ fun launchZegoChat(context: Context) {
             if (errorInfo == null || errorInfo.code == ZIMErrorCode.SUCCESS) {
 
                 val intent = Intent(context, ConversationActivity::class.java)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // ADD THIS LINE
                 context.startActivity(intent)
+
             } else {
                 Toast.makeText(context, "Chat login failed: ${errorInfo.message}", Toast.LENGTH_SHORT).show()
             }
