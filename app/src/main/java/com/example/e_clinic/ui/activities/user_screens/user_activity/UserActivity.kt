@@ -1,6 +1,5 @@
 package com.example.e_clinic.ui.activities.user_screens.user_activity
 
-import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import com.example.e_clinic.services.Service
@@ -133,7 +132,17 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier) {
                 navController.navigate("home")
             }
         }
-        composable("ai_chat") { AiAssistantChatScreen() }
+        composable("ai_chat") {
+            val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return@composable
+            AiAssistantChatScreen(
+                userId = userId,
+                onAppointmentBooked = {
+                    // Optional navigation after booking
+                    // e.g. navController.navigate("appointments")
+                }
+            )
+        }
+
 
     }
 }

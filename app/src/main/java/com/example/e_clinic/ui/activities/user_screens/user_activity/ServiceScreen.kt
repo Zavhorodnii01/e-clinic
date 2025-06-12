@@ -56,39 +56,4 @@ fun ServicesScreen(navController: NavHostController) {
 
 
 
-/**
- * Given a free-text symptom/problem description, returns 1-3 suitable
- * doctor specializations from DoctorSpecialization.values().
- */
-suspend fun generateSpecializationSuggestions(prompt: String): String {
-    // Build a comma-separated list of all allowed specializations.
-    val availableSpecs = DoctorSpecialization.values()
-        .joinToString(", ") { it.displayName }
-
-    val finalPrompt = """
-        You are an AI medical assistant.
-        Choose the most relevant doctor specialization(s) for the patient's problem.
-        Only pick from this list: $availableSpecs.
-        Return up to three suggestions, each with a brief reason (max 25 words each).
-        
-        Patient description: $prompt
-    """.trimIndent()
-
-    val apiKey = ""  // TODO: insert your key
-
-    val model = GenerativeModel(
-        modelName = "gemini-1.5-flash",
-        apiKey = apiKey
-    )
-
-    return try {
-        val raw = model.generateContent(finalPrompt).text.orEmpty()
-        raw
-            .replace(Regex("\\*\\*(.*?)\\*\\*"), "$1")        // strip **bold**
-            .replace(Regex("^\\*\\s+", RegexOption.MULTILINE),"") // strip bullets
-            .trim()
-    } catch (e: Exception) {
-        "Error: ${e.message}"
-    }
-}
 

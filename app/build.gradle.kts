@@ -17,6 +17,7 @@ val localProperties = Properties().apply {
 
 val appID = localProperties["APP_ID"]
 val appSign = localProperties["APP_SIGN"]
+val apiKey = localProperties["GEMINI_API_KEY"]
 
 android {
     namespace = "com.example.e_clinic"
@@ -31,9 +32,9 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Wstrzyknięcie kluczy do BuildConfig
         buildConfigField("String", "APP_ID", "\"$appID\"")
         buildConfigField("String", "APP_SIGN", "\"$appSign\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"$apiKey\"")
     }
 
     buildFeatures {
@@ -104,7 +105,8 @@ dependencies {
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     // ZEGOCLOUD In-App Chat
-    implementation("com.github.ZEGOCLOUD:zego_inapp_chat_uikit_android:+")
+    implementation ("com.github.ZEGOCLOUD:zego_inapp_chat_uikit_android:+")
+
 
     // Accompanist (Zaktualizowana wersja)
     implementation("com.google.accompanist:accompanist-pager:0.33.2-alpha")
@@ -125,6 +127,10 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+
+
+    //implementation("com.google.ai.client:generativeai:0.3.1") // проверь последнюю доступную версию
 
 
 
