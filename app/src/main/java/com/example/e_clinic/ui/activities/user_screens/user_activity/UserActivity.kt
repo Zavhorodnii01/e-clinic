@@ -1,5 +1,6 @@
 package com.example.e_clinic.ui.activities.user_screens.user_activity
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import com.example.e_clinic.services.Service
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
@@ -42,6 +44,7 @@ import com.example.e_clinic.ui.theme.EClinicTheme
 import androidx.navigation.compose.rememberNavController
 import com.example.e_clinic.ZEGOCloud.launchZegoChat
 import com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.ServiceListItem
+import com.example.e_clinic.ui.activities.user_screens.UserLogInActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 //import com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.ServiceListItem
@@ -95,6 +98,12 @@ fun MainScreen() {
                 actions = {
                     IconButton(onClick = { showSettings = true }) {
                         Icon(imageVector = Icons.Default.Menu, contentDescription = "Menu")
+                    }
+                    IconButton(onClick = {FirebaseAuth.getInstance().signOut()
+                    val intent = Intent(context, UserLogInActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    context.startActivity(intent)}) {
+                        Icon(imageVector = Icons.Default.ExitToApp, contentDescription = "Logout")
                     }
                 }
             )

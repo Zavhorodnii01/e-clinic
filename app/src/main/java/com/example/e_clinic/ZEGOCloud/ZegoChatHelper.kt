@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.zegocloud.zimkit.services.ZIMKit
 import im.zego.zim.enums.ZIMErrorCode
 
@@ -11,8 +12,14 @@ fun launchZegoChat(context: Context) {
     val user = FirebaseAuth.getInstance().currentUser
     if (user != null) {
         val userId = user.uid
-        val userName = user.displayName ?: user.email ?: user.uid
-        val userAvatar = "" // Optional avatar URL
+        val db = FirebaseFirestore.getInstance()
+
+        db.collection("users").document(userId).get().addOnSuccessListener { document ->
+            if (document.exists()) {
+                val name = document.getString("name") ?: "Unknown"
+                val surname = document.getString("surname") ?: "Unknown"
+                val userName = "$name $surname"
+                val userAvatar = "" // Optional avatar URL
 
         ZIMKit.connectUser(userId, userName, userAvatar) { errorInfo ->
             if (errorInfo == null || errorInfo.code == ZIMErrorCode.SUCCESS) {
@@ -27,5 +34,7 @@ fun launchZegoChat(context: Context) {
         }
     } else {
         Toast.makeText(context, "User not logged in.", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 }

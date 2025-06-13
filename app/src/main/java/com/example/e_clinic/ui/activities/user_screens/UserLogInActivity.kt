@@ -50,6 +50,16 @@ import com.google.firebase.firestore.FirebaseFirestore
 class UserLogInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val auth = FirebaseAuth.getInstance()
+        val currentUser = auth.currentUser
+
+        if (currentUser != null){
+            val intent = Intent(this, PinEntryActivity::class.java)
+            startActivity(intent)
+            finish()
+        }
+        else{
+
         enableEdgeToEdge()
         setContent {
             EClinicTheme {
@@ -64,6 +74,7 @@ class UserLogInActivity : ComponentActivity() {
                 )
             }
         }
+    }
     }
 }
 
@@ -126,34 +137,34 @@ fun LogInScreen(
             modifier = Modifier.padding(12.dp)
         )
 
-        if (currentUser != null) {
-            Text("Zalogowano jako: ${currentUser.email}", fontSize = 14.sp)
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(
-                onClick = onContinueAsUser,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text("Kontynuuj jako ${currentUser.email}")
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = {
-                    auth.signOut()
-                    GoogleSignIn.getClient(
-                        context,
-                        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                            .requestIdToken(context.getString(R.string.default_web_client_id))
-                            .requestEmail()
-                            .build()
-                    ).signOut()
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Wyloguj")
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-        }
+//        if (currentUser != null) {
+//            Text("Zalogowano jako: ${currentUser.email}", fontSize = 14.sp)
+//            Spacer(modifier = Modifier.height(8.dp))
+//            Button(
+//                onClick = onContinueAsUser,
+//                modifier = Modifier.fillMaxWidth(),
+//                shape = RoundedCornerShape(8.dp)
+//            ) {
+//                Text("Kontynuuj jako ${currentUser.email}")
+//            }
+//            Spacer(modifier = Modifier.height(8.dp))
+//            OutlinedButton(
+//                onClick = {
+//                    auth.signOut()
+//                    GoogleSignIn.getClient(
+//                        context,
+//                        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+//                            .requestIdToken(context.getString(R.string.default_web_client_id))
+//                            .requestEmail()
+//                            .build()
+//                    ).signOut()
+//                },
+//                modifier = Modifier.fillMaxWidth()
+//            ) {
+//                Text("Wyloguj")
+//            }
+//            Spacer(modifier = Modifier.height(24.dp))
+//        }
 
         TextField(
             value = email,

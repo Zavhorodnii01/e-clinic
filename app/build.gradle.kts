@@ -118,6 +118,10 @@ dependencies {
     implementation(libs.androidx.datastore.core.android)
     implementation(libs.generativeai)
     implementation("io.coil-kt:coil-compose:2.4.0")
+    implementation(libs.androidx.media3.common.ktx)
+
+    implementation("androidx.biometric:biometric:1.1.0")
+    //implementation("androidx.biometric:biometric-ktx:1.0.1")
 
     // Testy
     testImplementation(libs.junit)

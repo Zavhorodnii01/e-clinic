@@ -2,6 +2,7 @@ package com.example.e_clinic.ui.activities.user_screens
 
 import android.app.Activity
 import android.content.Intent
+import android.hardware.biometrics.BiometricPrompt
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -25,6 +26,9 @@ import com.example.e_clinic.ui.activities.user_screens.user_activity.UserActivit
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+//import com.google.firebase.firestore.util.Executors
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
 
 class SetPinAfterLoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -183,29 +187,6 @@ fun SetPinAfterLoginScreen() {
                 modifier = Modifier.padding(bottom = 8.dp)
             )
         }
-
-//        // Skip button
-//        Text(
-//            text = "Skip",
-//            color = MaterialTheme.colorScheme.primary,
-//            modifier = Modifier
-//                .clickable {
-//                    db.collection("users").document(userId)
-//                        .set(
-//                            mapOf(
-//                                "hasSetPin" to false,
-//                                "rememberDevice" to false
-//                            ),
-//                            SetOptions.merge()
-//                        )
-//                        .addOnSuccessListener {
-//                            val intent = Intent(context, UserActivity::class.java)
-//                            context.startActivity(intent)
-//                            (context as Activity).finish()
-//                        }
-//                }
-//                .padding(16.dp)
-//        )
     }
 }
 
