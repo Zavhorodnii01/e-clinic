@@ -2,14 +2,19 @@
 package com.example.e_clinic.ui.activities.user_screens
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import androidx.biometric.BiometricPrompt
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,12 +25,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.fragment.app.FragmentActivity
 import com.example.e_clinic.services.functions.hashPin
 import com.example.e_clinic.ui.activities.user_screens.user_activity.UserActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
-class PinEntryActivity : ComponentActivity() {
+class PinEntryActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -53,6 +59,35 @@ fun PinEntryScreen(
     val db = FirebaseFirestore.getInstance()
     val currentUser = auth.currentUser
 
+    var pin by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+   //var biometricFailures by remember { mutableStateOf(0) }
+    var showPinScreen by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        showBiometricPrompt(context){
+            success, canceled ->
+            if (success) {
+                onPinVerified()
+            }
+            else {
+              showPinScreen = true
+            }
+        }
+    }
+
+    if (!showPinScreen){
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    }
+
+    else{
     LaunchedEffect(key1 = currentUser) {
         if (currentUser != null) {
             db.collection("users").document(currentUser.uid).get()
@@ -74,8 +109,6 @@ fun PinEntryScreen(
         }
     }
 
-    var pin by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -165,6 +198,32 @@ fun PinEntryScreen(
                     }
                 }
 
+//                Box(
+//                    modifier = Modifier
+//                        .size(64.dp)
+//                        .clip(CircleShape)
+//                        .background(MaterialTheme.colorScheme.primaryContainer)
+//                        .clickable{
+//                            showBiometricPrompt(context){ success ->
+//                                if (success){
+//                                    onPinVerified()
+//                                } else {
+//                                    error = "Biometric authentication failed"
+//                                }
+//
+//                            }
+//                        },
+//                    contentAlignment = Alignment.Center
+//                ){
+//                    Icon(
+//                        imageVector = Icons.Default.Face,
+//                        contentDescription = "Biometric Authentication",
+//                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+//                    )
+//
+//                }
+//                Spacer(modifier = Modifier.height(32.dp))
+
                 Box(
                     modifier = Modifier
                         .size(64.dp)
@@ -207,6 +266,7 @@ fun PinEntryScreen(
                 }
                 .padding(16.dp)
         )
+    }
     }
 }
 
@@ -260,6 +320,44 @@ fun verifyPin(
 }
 
 
+fun showBiometricPrompt(
+    context: Context, onAuthenticationResult: (Boolean, Boolean) -> Unit
+) {
+    var failureCount = 0
+    val executor = ContextCompat.getMainExecutor(context)
+    val biometricPrompt = BiometricPrompt(
+        context as FragmentActivity,
+        executor,
+        object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                super.onAuthenticationSucceeded(result)
+                onAuthenticationResult(true, false)
+            }
+
+            override fun onAuthenticationFailed() {
+                super.onAuthenticationFailed()
+                 onAuthenticationResult(false, true) // Show PIN entry screen
+
+            }
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                super.onAuthenticationError(errorCode, errString)
+                if (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
+                    onAuthenticationResult(false, true) // Handle cancel action
+                } else {
+                    onAuthenticationResult(false, false)
+                }
+            }
+        }
+    )
+    val promptInfo = BiometricPrompt.PromptInfo.Builder()
+        .setTitle("Biometric Authentication")
+        .setSubtitle("Use your fingerprint or face to authenticate")
+        .setNegativeButtonText("Cancel")
+        .build()
+
+    biometricPrompt.authenticate(promptInfo)
+}
 
 //class PinEntryActivity : ComponentActivity() {
 //    override fun onCreate(savedInstanceState: android.os.Bundle?) {
