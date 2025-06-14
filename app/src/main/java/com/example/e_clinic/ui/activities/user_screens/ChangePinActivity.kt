@@ -12,10 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
-import java.security.MessageDigest
+import com.example.e_clinic.services.PinManager
 
 class ChangePinActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,18 +26,11 @@ class ChangePinActivity : ComponentActivity() {
 @Composable
 fun ChangePinScreen() {
     val context = LocalContext.current
+    val pinManager = PinManager(context)
+
     var newPin by remember { mutableStateOf("") }
     var confirmPin by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
-
-    val auth = FirebaseAuth.getInstance()
-    val db = FirebaseFirestore.getInstance()
-
-    fun hashPin(pin: String): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val hashBytes = digest.digest(pin.toByteArray())
-        return hashBytes.joinToString("") { "%02x".format(it) }
-    }
 
     Column(
         modifier = Modifier
@@ -78,52 +68,14 @@ fun ChangePinScreen() {
                 } else if (newPin != confirmPin) {
                     message = "PINs do not match"
                 } else {
-                    val userId = auth.currentUser?.uid
-                    val hashedPin = hashPin(newPin)
-
-                    if (userId != null) {
-                        db.collection("users").document(userId)
-                            .update(mapOf(
-                                "pinCode" to hashedPin,
-                                "hasSetPin" to true
-                            ))
-                            .addOnSuccessListener {
-                                message = "PIN changed successfully"
-                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                            }
-                            .addOnFailureListener {
-                                message = "Failed to update PIN: ${it.message}"
-                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                            }
-                    } else {
-                        message = "User not logged in"
-                    }
+                    pinManager.savePin(newPin)
+                    message = "PIN changed successfully"
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Save PIN")
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedButton(
-            onClick = {
-                val userId = auth.currentUser?.uid
-                if (userId != null) {
-                    db.collection("users").document(userId)
-                        .update("pinCode", FieldValue.delete())
-                        .addOnSuccessListener {
-                            Toast.makeText(context, "Skipped setting PIN", Toast.LENGTH_SHORT).show()
-                        }
-                        .addOnFailureListener {
-                            Toast.makeText(context, "Error: ${it.message}", Toast.LENGTH_SHORT).show()
-                        }
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Not now")
         }
 
         if (message.isNotEmpty()) {

@@ -1,20 +1,16 @@
 // PinEntryActivity.kt
 package com.example.e_clinic.ui.activities.user_screens
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import androidx.biometric.BiometricPrompt
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,10 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
-import com.example.e_clinic.services.functions.hashPin
+import com.example.e_clinic.services.PinManager
 import com.example.e_clinic.ui.activities.user_screens.user_activity.UserActivity
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 
 class PinEntryActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,9 +49,7 @@ fun PinEntryScreen(
     onSetupRequired: () -> Unit
 ) {
     val context = LocalContext.current
-    val auth = FirebaseAuth.getInstance()
-    val db = FirebaseFirestore.getInstance()
-    val currentUser = auth.currentUser
+    val pinManager = PinManager(context)
 
     var pin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -88,185 +80,134 @@ fun PinEntryScreen(
     }
 
     else{
-    LaunchedEffect(key1 = currentUser) {
-        if (currentUser != null) {
-            db.collection("users").document(currentUser.uid).get()
-                .addOnSuccessListener { doc ->
-                    val hasSetPin = doc.getBoolean("hasSetPin") ?: false
-                    val rememberDevice = doc.getBoolean("rememberDevice") ?: false
-
-                    if (!hasSetPin) {
-                        onSetupRequired()
-                    } else if (!rememberDevice) {
-                        auth.signOut()
-                        context.startActivity(Intent(context, UserLogInActivity::class.java))
-                        (context as Activity).finish()
-                    }
-                }
-        } else {
-            context.startActivity(Intent(context, UserLogInActivity::class.java))
-            (context as Activity).finish()
-        }
-    }
-
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(40.dp))
-
-        // Welcome message
-        Text(
-            text = "Welcome back!",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // PIN prompt
-        Text(
-            text = "Enter PIN code",
-            fontSize = 18.sp
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // PIN circles indicator
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            for (i in 1..4) {
-                val filled = i <= pin.length
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(if (filled) MaterialTheme.colorScheme.primary else Color.LightGray)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        // Numeric keypad
         Column(
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            for (row in 0 until 3) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(24.dp)
-                ) {
-                    for (col in 1..3) {
-                        val number = (row * 3 + col).toString()
-                        NumberButton(number) {
-                            if (pin.length < 4) {
-                                pin += number
-                                error = null
-                                if (pin.length == 4) {
-                                    verifyPin(pin, db, auth, onPinVerified) { errorMsg ->
-                                        error = errorMsg
+            Spacer(modifier = Modifier.height(40.dp))
+
+            Text(
+                text = "Welcome back!",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "Enter PIN code",
+                fontSize = 18.sp
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                for (i in 1..4) {
+                    val filled = i <= pin.length
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(if (filled) MaterialTheme.colorScheme.primary else Color.LightGray)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                for (row in 0 until 3) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
+                        for (col in 1..3) {
+                            val number = (row * 3 + col).toString()
+                            NumberButtonSet(number) {
+                                if (pin.length < 4) {
+                                    pin += number
+                                    error = null
+                                    if (pin.length == 4) {
+                                        if (pinManager.validatePin(pin)) {
+                                            onPinVerified()
+                                        } else {
+                                            error = "Incorrect PIN"
+                                            pin = ""
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            // Last row (0 and backspace)
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(24.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Spacer(modifier = Modifier.size(64.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Spacer(modifier = Modifier.size(64.dp))
 
-                NumberButton("0") {
-                    if (pin.length < 4) {
-                        pin += "0"
-                        error = null
-                        if (pin.length == 4) {
-                            verifyPin(pin, db, auth, onPinVerified) { errorMsg ->
-                                error = errorMsg
+                    NumberButtonSet("0") {
+                        if (pin.length < 4) {
+                            pin += "0"
+                            error = null
+                            if (pin.length == 4) {
+                                if (pinManager.validatePin(pin)) {
+                                    onPinVerified()
+                                } else {
+                                    error = "Incorrect PIN"
+                                    pin = ""
+                                }
                             }
                         }
                     }
-                }
 
-//                Box(
-//                    modifier = Modifier
-//                        .size(64.dp)
-//                        .clip(CircleShape)
-//                        .background(MaterialTheme.colorScheme.primaryContainer)
-//                        .clickable{
-//                            showBiometricPrompt(context){ success ->
-//                                if (success){
-//                                    onPinVerified()
-//                                } else {
-//                                    error = "Biometric authentication failed"
-//                                }
-//
-//                            }
-//                        },
-//                    contentAlignment = Alignment.Center
-//                ){
-//                    Icon(
-//                        imageVector = Icons.Default.Face,
-//                        contentDescription = "Biometric Authentication",
-//                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-//                    )
-//
-//                }
-//                Spacer(modifier = Modifier.height(32.dp))
-
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clickable {
-                            if (pin.isNotEmpty()) {
-                                pin = pin.dropLast(1)
-                                error = null
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "⌫",
-                        fontSize = 24.sp
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clickable {
+                                if (pin.isNotEmpty()) {
+                                    pin = pin.dropLast(1)
+                                    error = null
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "⌫",
+                            fontSize = 24.sp
+                        )
+                    }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-        // Error message
-        error?.let {
+            error?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
             Text(
-                text = it,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(bottom = 8.dp)
+                text = "Forgot PIN code?",
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clickable {
+                        onSetupRequired()
+                    }
+                    .padding(16.dp)
             )
         }
-
-        // Forgot PIN link
-        Text(
-            text = "Forgot PIN code?",
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .clickable {
-                    auth.signOut()
-                    context.startActivity(Intent(context, UserLogInActivity::class.java))
-                    (context as Activity).finish()
-                }
-                .padding(16.dp)
-        )
-    }
     }
 }
 
@@ -287,36 +228,6 @@ fun NumberButton(number: String, onClick: () -> Unit) {
             color = MaterialTheme.colorScheme.onPrimaryContainer
         )
     }
-}
-
-fun verifyPin(
-    inputPin: String,
-    db: FirebaseFirestore,
-    auth: FirebaseAuth,
-    onSuccess: () -> Unit,
-    onError: (String) -> Unit
-) {
-    val currentUser = auth.currentUser
-    if (currentUser == null) {
-        onError("User not authenticated")
-        return
-    }
-
-    db.collection("users").document(currentUser.uid).get()
-        .addOnSuccessListener { doc ->
-            when {
-                !doc.exists() -> onError("User data not found")
-                doc.getString("pinCode") == null -> onError("PIN not set or removed")
-                doc.getString("pinCode") == hashPin(inputPin) -> {
-                    db.collection("users").document(currentUser.uid)
-                        .update("rememberDevice", true)
-                        .addOnSuccessListener { onSuccess() }
-                        .addOnFailureListener { onError("Failed to update device status") }
-                }
-                else -> onError("Incorrect PIN")
-            }
-        }
-        .addOnFailureListener { onError("Failed to access database") }
 }
 
 

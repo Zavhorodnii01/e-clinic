@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_clinic.R
+import com.example.e_clinic.services.PinManager
 import com.example.e_clinic.ui.activities.user_screens.user_activity.UserActivity
 import com.example.e_clinic.ui.activities.user_screens.PinEntryActivity
 import com.example.e_clinic.ui.activities.user_screens.SetPinAfterLoginActivity
@@ -50,16 +51,16 @@ import com.google.firebase.firestore.FirebaseFirestore
 class UserLogInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val pinManager = PinManager(this)
         val auth = FirebaseAuth.getInstance()
         val currentUser = auth.currentUser
 
-        if (currentUser != null){
-            val intent = Intent(this, PinEntryActivity::class.java)
+        if (pinManager.getPin() != null && currentUser != null) {
+            val intent = (Intent(this, PinEntryActivity::class.java))
             startActivity(intent)
             finish()
         }
         else{
-
         enableEdgeToEdge()
         setContent {
             EClinicTheme {

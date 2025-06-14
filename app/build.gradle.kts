@@ -121,6 +121,7 @@ dependencies {
     implementation(libs.androidx.media3.common.ktx)
 
     implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.security:security-crypto:1.0.0")
     //implementation("androidx.biometric:biometric-ktx:1.0.1")
 
     // Testy
