@@ -78,6 +78,7 @@
         <activity
             android:name=".ui.activities.doctor_screens.DoctorPinEntryActivity"
             android:exported="true" />
+        <activity android:name=".ui.activities.doctor_screens.SetDoctorPinAfterLoginActivity" />
 
     </application>
 
