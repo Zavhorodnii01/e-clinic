@@ -1,7 +1,7 @@
 package com.example.e_clinic.ui.activities.doctor_screens.doctor_activity
 
-
 import android.content.Intent
+import android.widget.Toast // Add this import
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,13 +39,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.e_clinic.Firebase.collections.Appointment
+import com.example.e_clinic.Firebase.collections.MedicalRecord
 import com.example.e_clinic.Firebase.repositories.AppointmentRepository
 import com.example.e_clinic.Firebase.repositories.DoctorRepository
 import com.example.e_clinic.Firebase.repositories.UserRepository
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.Date // Make sure you import Date if your Appointment class uses it
+import java.text.SimpleDateFormat // Make sure you import SimpleDateFormat
+import java.util.Locale
+
+// Assuming PrescribeScreen is defined elsewhere and imported correctly
+// import com.example.e_clinic.ui.activities.doctor_screens.PrescribeScreen // Example Import
 
 @Composable
 fun HomeScreen(){
@@ -61,8 +69,12 @@ fun HomeScreen(){
     val todayAppointmentsCount = remember { mutableStateOf(0) }
     val doctorState = remember { mutableStateOf<String?>(null) }
     var selectedAppointment = remember { mutableStateOf<Appointment?>(null) }
+    val showPrescriptionChoice = remember { mutableStateOf(false) }
     val showPrescribeScreen = remember { mutableStateOf(false) }
     val currentAppointment = remember { mutableStateOf<Appointment?>(null) }
+    val prescribePatientId = remember { mutableStateOf<String?>(null) }
+    val prescribeAppointmentId = remember { mutableStateOf<String?>(null) }
+    var medicalRecordId = remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(doctorEmail) {
         if (doctorEmail.isNotEmpty()) {
@@ -85,45 +97,70 @@ fun HomeScreen(){
                         }
                     }
                 }
-
             }
         }
     }
 
-    Column(
+    // TODO TRANSACTION
+    fun finishAppointment(appointment: Appointment) {
+        val record = MedicalRecord(
+            // Use the same ID as the appointment
+            appointment_id = appointment.id, // Assuming it's a Timestamp
+            user_id = appointment.user_id,
+            doctor_id = doctorState.value ?: "",
+            date = appointment.date,
+            prescription_id = "", // You can fill this in later after prescription is added
+            doctors_notes = "" // You can allow doctors to edit notes later
+        )
+
+
+        // Create a new medical record
+        val db = FirebaseFirestore.getInstance()
+        val recordRef = db.collection("medical_records").document()
+        val appointmentRef = db.collection("appointments").document(appointment.id)
+        medicalRecordId.value = recordRef.id
+        db.runTransaction { transaction ->
+            transaction.set(recordRef, record)
+            transaction.update(appointmentRef, "status", "FINISHED")
+            null
+        }.addOnSuccessListener {
+            Toast.makeText(context, "Appointment finished", Toast.LENGTH_SHORT).show()
+
+            doctorState.value?.let { doctorId ->
+                appointmentRepository.getAppointmentsForDoctor(doctorId) { fetchedAppointments ->
+                    appointments.clear()
+                    appointments.addAll(fetchedAppointments)
+                }
+            }
+
+            currentAppointment.value = null
+        }.addOnFailureListener { e ->
+            Toast.makeText(context, "Transaction failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            currentAppointment.value = null
+        }
+    }
+
+        Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
     ) {
         Text(
-            text = if (todayAppointmentsCount.value == 0)
-                "You don't have any scheduled appointment today"
-            else if (todayAppointmentsCount.value == 1)
-                "Today you have scheduled ${todayAppointmentsCount.value} appointment"
-            else
-                "Today you have scheduled ${todayAppointmentsCount.value} appointments",
+            text = when (todayAppointmentsCount.value) {
+                0 -> "You don't have any scheduled appointment today"
+                1 -> "Today you have scheduled ${todayAppointmentsCount.value} appointment"
+                else -> "Today you have scheduled ${todayAppointmentsCount.value} appointments"
+            },
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
         DoctorAppointmentCalendar(
-            appointments = appointments,
+            appointments = appointments.filter { it.status != "FINISHED" },
             onAppointmentClick = { appointment ->
-                // Handle appointment click, e.g., navigate to appointment details
-                // For now, just print the appointment ID
                 selectedAppointment.value = appointment
             }
         )
-
-        LazyColumn(modifier = Modifier.padding(horizontal = 16.dp)) {
-            items(appointments, key = { it.id }) { appointment ->
-                AppointmentItem(
-                    title = "Patient: ${appointment.user_id}",
-                    description = "Date & Time: ${appointment.date}"
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-        }
     }
 
     if (selectedAppointment.value != null) {
@@ -135,18 +172,17 @@ fun HomeScreen(){
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)){
+                    Column(modifier = Modifier.padding(16.dp)) {
                         val patientName = remember(selectedAppointment.value?.user_id) { mutableStateOf("Loading...") }
                         LaunchedEffect(selectedAppointment.value?.user_id) {
                             selectedAppointment.value?.user_id?.let { userId ->
-                                FirebaseFirestore.getInstance()
-                                    .collection("users")
+                                db.collection("users")
                                     .document(userId)
                                     .get()
                                     .addOnSuccessListener { doc ->
                                         val name = doc.getString("name") ?: ""
                                         val surname = doc.getString("surname") ?: ""
-                                        patientName.value = "$name $surname"
+                                        patientName.value = if (name.isNotEmpty() || surname.isNotEmpty()) "$name $surname" else "Unknown"
                                     }
                                     .addOnFailureListener {
                                         patientName.value = "Unknown"
@@ -154,14 +190,11 @@ fun HomeScreen(){
                             }
                         }
 
-                        Text(
-                            text = "Patient: ${patientName.value}",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                        Text(text = "Patient: ${patientName.value}", style = MaterialTheme.typography.bodyLarge)
                         Text(
                             text = "Date: ${
                                 selectedAppointment.value?.date?.toDate()?.let {
-                                    java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(it)
+                                    SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(it)
                                 } ?: "N/A"
                             }",
                             style = MaterialTheme.typography.bodyMedium
@@ -171,7 +204,6 @@ fun HomeScreen(){
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
-
                     Column(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -183,60 +215,97 @@ fun HomeScreen(){
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Button(onClick = {
-                                //TODO: Connect to Zego
                                 println("Chat with patient: ${selectedAppointment.value?.id}")
                                 selectedAppointment.value = null
                             }) {
                                 Text(text = "Chat")
                             }
                             Button(onClick = {
-                                selectedAppointment.value?.let { appointment ->
-                                    currentAppointment.value = appointment
-                                    showPrescribeScreen.value = true
-                                    selectedAppointment.value = null
-                                }
+                                currentAppointment.value = selectedAppointment.value
+                                selectedAppointment.value = null
+                                showPrescriptionChoice.value = true
                             }) {
-                                Text(text = "Prescribe")
+                                Text(text = "Finish")
                             }
-                        }
-                        Button(onClick = {
-                            //TODO: Finalize appointment, change status to "FINISHED"
-                            println("Finalize appointment: ${selectedAppointment.value?.id}")
-                            selectedAppointment.value = null
-                        }) {
-                            Text(text = "Finish Appointment")
                         }
                     }
                 }
             },
-            confirmButton = { }
+            confirmButton = {}
         )
     }
 
-    if (showPrescribeScreen.value && currentAppointment.value != null) {
-        // Display the prescription screen from within composable context
+    if (showPrescriptionChoice.value && currentAppointment.value != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showPrescriptionChoice.value = false
+                currentAppointment.value = null
+            },
+            title = { Text("Finish Appointment") },
+            text = { Text("Would you like to add a prescription now?") },
+            confirmButton = {
+                Button(onClick = {
+                    val appointment = currentAppointment.value!!
+                    finishAppointment(appointment)
+                    showPrescriptionChoice.value = false
+                    prescribePatientId.value = appointment.user_id
+                    prescribeAppointmentId.value = appointment.id
+                    showPrescribeScreen.value = true
+                }) {
+                    Text("Yes, Add Prescription")
+                }
+            },
+            dismissButton = {
+                Button(onClick = {
+                    finishAppointment(currentAppointment.value!!)
+                    showPrescriptionChoice.value = false
+                }) {
+                    Text("No, Finish Without")
+                }
+            }
+        )
+    }
+
+    if (
+        showPrescribeScreen.value &&
+        prescribePatientId.value != null &&
+        prescribeAppointmentId.value != null
+    ) {
         PrescribeScreen(
             fromCalendar = true,
-            patientId = currentAppointment.value!!.user_id
+            patientId = prescribePatientId.value!!,
+            appointmentId = prescribeAppointmentId.value!!,
+            medicalRecordId = medicalRecordId.value!!,
+            onDismiss = {
+                showPrescribeScreen.value = false
+                prescribePatientId.value = null
+                prescribeAppointmentId.value = null
+            }
         )
     }
-
 }
 
+// Keep your existing DoctorAppointmentCalendar composable unchanged if its logic is fine
 @Composable
 fun DoctorAppointmentCalendar(
     appointments: List<Appointment>,
     onAppointmentClick : (Appointment) -> Unit
-
 ){
+    // ... (Your existing DoctorAppointmentCalendar code) ...
     val today = remember { mutableStateOf(LocalDate.now()) }
+    // Filter for today's appointments, exclude FINISHED status from the *calendar* view
     val dayAppointments = appointments.filter { appointment ->
-        appointment.date?.toDate()?.toInstant()
-            ?.atZone(ZoneId.systemDefault())
-            ?.toLocalDate() == today.value
-    }.sortedBy { it.date?.toDate() }
+        (appointment.status == "NOT_FINISHED" || appointment.status == "FINISHED") && // Keep FINISHED status in list but maybe not clickable? Or filter later?
+                appointment.date?.toDate()?.toInstant()
+                    ?.atZone(ZoneId.systemDefault())
+                    ?.toLocalDate() == today.value
+    }.sortedBy { it.date?.toDate() } // Sort by time
+
+    // Re-filter dayAppointments for display in calendar slots to only show NOT_FINISHED
+    val displayDayAppointments = dayAppointments.filter { it.status == "NOT_FINISHED" } // Only show NOT_FINISHED in time slots
+
     val colorScheme = MaterialTheme.colorScheme
-    val userRepository = UserRepository()
+    val userRepository = UserRepository() // Unused?
 
     Column(
         modifier = Modifier
@@ -265,15 +334,16 @@ fun DoctorAppointmentCalendar(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // List of time slots
         LazyColumn(
             modifier = Modifier.fillMaxWidth()
         ) {
             items(24) { hour ->
-                val appointmentAtHour = dayAppointments.find { appointment ->
-                    (appointment.status == "NOT_FINISHED" || appointment.status == "FINISHED") &&
-                            appointment.date?.toDate()?.toInstant()
-                            ?.atZone(ZoneId.systemDefault())
-                            ?.hour == hour
+                // Find appointment for this hour among the *displayable* appointments (NOT_FINISHED)
+                val appointmentAtHour = displayDayAppointments.find { appointment ->
+                    appointment.date?.toDate()?.toInstant()
+                        ?.atZone(ZoneId.systemDefault())
+                        ?.hour == hour
                 }
                 Row(
                     modifier = Modifier
@@ -291,33 +361,34 @@ fun DoctorAppointmentCalendar(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(start = 8.dp)
-                                .clickable { onAppointmentClick(appointmentAtHour) }
+                                .clickable { onAppointmentClick(appointmentAtHour) } // Clickable card
                         ) {
-
                             Column(modifier = Modifier.padding(8.dp)) {
+                                // --- Patient Name Loading ---
                                 val patientName = remember(appointmentAtHour.user_id) { mutableStateOf("Loading...") }
                                 LaunchedEffect(appointmentAtHour.user_id) {
-                                    FirebaseFirestore.getInstance()
+                                    FirebaseFirestore.getInstance() // Use instance directly or inject
                                         .collection("users")
                                         .document(appointmentAtHour.user_id)
                                         .get()
                                         .addOnSuccessListener { doc ->
                                             val name = doc.getString("name") ?: ""
                                             val surname = doc.getString("surname") ?: ""
-                                            patientName.value = "$name $surname"
+                                            patientName.value = if (name.isNotEmpty() || surname.isNotEmpty()) "$name $surname" else "Unknown"
                                         }
                                         .addOnFailureListener {
                                             patientName.value = "Unknown"
                                         }
                                 }
+                                // --- End Patient Name Loading ---
                                 Text(
                                     text = "Patient: ${patientName.value}",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
-                                    text = "Date: ${
+                                    text = "Time: ${
                                         appointmentAtHour.date?.toDate()?.let {
-                                            java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(it)
+                                            SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(it) // Format only time
                                         } ?: "N/A"
                                     }",
                                     style = MaterialTheme.typography.bodySmall
@@ -325,7 +396,15 @@ fun DoctorAppointmentCalendar(
                             }
                         }
                     } else {
-                        Spacer(modifier = Modifier.weight(1f))
+                        // Display an empty slot or text if no appointment
+                        Text(
+                            text = "Available", // Or just Spacer
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 8.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray // Indicate it's an empty slot
+                        )
                     }
                 }
             }
@@ -333,3 +412,37 @@ fun DoctorAppointmentCalendar(
     }
 }
 
+/*// Assuming AppointmentItem is a simple composable for lists
+@Composable
+fun AppointmentItem(title: String, description: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            Text(text = description, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}*/
+
+// You MUST have a PrescribeScreen composable defined somewhere else.
+// It needs to accept patientId and an onDismiss lambda.
+
+/*@Composable
+fun PrescribeScreen(
+    fromCalendar: Boolean,
+    patientId: String?,
+    appointmentId: String?, // Added appointmentId, you might need this
+    onDismiss: () -> Unit // This is the lambda to call when done
+) {
+    // ... your existing PrescribeScreen UI and logic ...
+
+    // Example of how to call onDismiss (e.g., from a back button)
+    Column {
+        IconButton(onClick = onDismiss) { // This button closes the screen
+            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+        }
+        // ... rest of your prescription form/UI ...
+    }
+}*/

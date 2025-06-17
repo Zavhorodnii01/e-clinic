@@ -8,10 +8,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -22,18 +24,22 @@ import com.example.e_clinic.Firebase.collections.Prescription
 import com.example.e_clinic.Firebase.storage.uploadPrescriptionToStorage
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PrescribeScreenForm(doctorId: String) {
+fun PrescribeScreenForm(doctorId: String, medicalRecordId: String) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
     val db = FirebaseFirestore.getInstance()
-    val patients = remember { mutableStateListOf<Pair<String, String>>() }
 
-    var selectedPatient by rememberSaveable { mutableStateOf<Pair<String, String>?>(null) }
-    var showPatientDialog by rememberSaveable { mutableStateOf(false) }
+    // State for medical records with empty prescription IDs
+    val medicalRecords = remember { mutableStateListOf<Pair<String, String>>() } // Pair<recordId, displayText>
+    var selectedRecord by rememberSaveable { mutableStateOf<Pair<String, String>?>(null) }
+    var showRecordsDialog by rememberSaveable { mutableStateOf(false) }
 
     var selectedMedication by rememberSaveable { mutableStateOf<Drug?>(null) }
     var showMedicationDialog by rememberSaveable { mutableStateOf(false) }
@@ -45,28 +51,27 @@ fun PrescribeScreenForm(doctorId: String) {
     var isLoading by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
 
-    // Load patients from Firestore
+    // Load medical records with empty prescription IDs
     LaunchedEffect(doctorId) {
         isLoading = true
-        db.collection("appointments")
+        db.collection("medical_records")
             .whereEqualTo("doctor_id", doctorId)
+            .whereEqualTo("prescription_id", "")
             .get()
-            .addOnSuccessListener { result ->
-                val userIds = result.documents.mapNotNull { it.getString("user_id") }
-                patients.clear()
+            .addOnSuccessListener { recordsResult ->
+                medicalRecords.clear()
 
-                userIds.forEach { userId ->
-                    db.collection("users").document(userId).get()
-                        .addOnSuccessListener { userDoc ->
-                            val name = userDoc.getString("name") ?: ""
-                            val surname = userDoc.getString("surname") ?: ""
-                            if (name.isNotEmpty() && surname.isNotEmpty()) {
-                                patients.add(Pair(userId, "$name $surname"))
-                            }
-                        }
-                        .addOnFailureListener {
-                            // Handle error if needed
+                recordsResult.documents.forEach { record ->
+                    val patientId = record.getString("user_id") ?: ""
+                    val date = record.getTimestamp("date")?.toDate()?.formatToString() ?: "Unknown date"
 
+                    // Get patient name
+                    db.collection("users").document(patientId).get()
+                        .addOnSuccessListener { patientDoc ->
+                            val name = patientDoc.getString("name") ?: ""
+                            val surname = patientDoc.getString("surname") ?: ""
+                            val displayText = "$name $surname - $date"
+                            medicalRecords.add(Pair(record.id, displayText))
                         }
                 }
                 isLoading = false
@@ -82,85 +87,97 @@ fun PrescribeScreenForm(doctorId: String) {
                 .weight(1f)
                 .verticalScroll(scrollState)
                 .padding(16.dp)
-        ){
-        // Patient selection button
-        Button(
-            onClick = { showPatientDialog = true },
-            modifier = Modifier.fillMaxWidth()
         ) {
-            Text(selectedPatient?.second ?: "Select Patient")
-        }
+            // Medical record selection button
+            Button(
+                onClick = { showRecordsDialog = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(selectedRecord?.second ?: "Select Medical Record")
+            }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        // Medication selection button
-        Button(
-            onClick = { showMedicationDialog = true },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(selectedMedication?.name ?: "Select Medication")
-        }
+            // Medication selection button
+            Button(
+                onClick = { showMedicationDialog = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(selectedMedication?.name ?: "Select Medication")
+            }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        if (selectedMedication != null) {
-            Text("Active Substance: ${selectedMedication!!.activeSubstance}")
-            Text("Form: ${selectedMedication!!.form}")
-            Text("Type of Prescription: ${selectedMedication!!.typeOfPrescription}")
-            Text("Amount of Substance: ${selectedMedication!!.amountOfSubstance}")
-        }
+            if (selectedMedication != null) {
+                Text("Active Substance: ${selectedMedication!!.activeSubstance}")
+                Text("Form: ${selectedMedication!!.form}")
+                Text("Type of Prescription: ${selectedMedication!!.typeOfPrescription}")
+                Text("Amount of Substance: ${selectedMedication!!.amountOfSubstance}")
+            }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(
-            value = amount,
-            onValueChange = { amount = it.filter { c -> c.isDigit() }.take(2) },
-            label = { Text("Amount (boxes)") },
-            modifier = Modifier.fillMaxWidth()
-        )
+            OutlinedTextField(
+                value = amount,
+                onValueChange = { amount = it.filter { c -> c.isDigit() }.take(2) },
+                label = { Text("Amount (boxes)") },
+                modifier = Modifier.fillMaxWidth()
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(
-            value = dosage,
-            onValueChange = { dosage = it },
-            label = { Text("Dosage") },
-            modifier = Modifier.fillMaxWidth()
-        )
+            OutlinedTextField(
+                value = dosage,
+                onValueChange = { dosage = it },
+                label = { Text("Dosage") },
+                modifier = Modifier.fillMaxWidth()
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(
-            value = instructions,
-            onValueChange = { instructions = it },
-            label = { Text("Instructions") },
-            modifier = Modifier.fillMaxWidth()
-        )
+            OutlinedTextField(
+                value = instructions,
+                onValueChange = { instructions = it },
+                label = { Text("Instructions") },
+                modifier = Modifier.fillMaxWidth()
+            )
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
 
         Button(
             onClick = {
-                if (selectedPatient != null && selectedMedication != null && dosage.isNotBlank()) {
-
-                    val prescription = Prescription(doctor_id = doctorId,
-                        user_id = selectedPatient!!.first,
+                if (selectedRecord != null && selectedMedication != null && dosage.isNotBlank()) {
+                    val prescription = Prescription(
+                        doctor_id = doctorId,
+                        user_id = "", // Will be set from medical record
                         issued_date = Timestamp.now(),
-                        link_to_storage="link",
-                        appointment_id = "appointmentid" ,
+                        link_to_storage = "link",
+                        appointment_id = "", // Will be set from medical record
                         doctor_comment = instructions,
                     )
-                    addPrescription(
-                        drug = selectedMedication!!,
-                        dosage = dosage,
-                        amount = amount,
-                        prescription = prescription
-                    )
-                    showSuccessDialog = true
+
+                    // First get the medical record to get patient_id and appointment_id
+                    db.collection("medical_records").document(selectedRecord!!.first).get()
+                        .addOnSuccessListener { recordDoc ->
+                            val patientId = recordDoc.getString("user_id") ?: ""
+                            val appointmentId = recordDoc.getString("appointment_id") ?: ""
+
+                            prescription.user_id = patientId
+                            prescription.appointment_id = appointmentId
+
+                            addPrescription(
+                                drug = selectedMedication!!,
+                                dosage = dosage,
+                                amount = amount,
+                                prescription = prescription,
+                                medicalRecordId = selectedRecord!!.first
+                            )
+                            showSuccessDialog = true
+                        }
                 }
             },
-            enabled = selectedPatient != null && selectedMedication != null && dosage.isNotBlank(),
+            enabled = selectedRecord != null && selectedMedication != null && dosage.isNotBlank(),
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Prescribe")
@@ -180,30 +197,34 @@ fun PrescribeScreenForm(doctorId: String) {
         )
     }
 
-    // Patient selection dialog
-    if (showPatientDialog) {
+    // Medical records selection dialog
+    if (showRecordsDialog) {
         AlertDialog(
-            onDismissRequest = { showPatientDialog = false },
-            title = { Text("Select Patient") },
+            onDismissRequest = { showRecordsDialog = false },
+            title = { Text("Select Medical Record") },
             text = {
-                LazyColumn {
-                    items(patients) { patient ->
-                        Text(
-                            text = patient.second,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    selectedPatient = patient
-                                    showPatientDialog = false
-                                }
-                                .padding(8.dp)
-                        )
+                if (medicalRecords.isEmpty()) {
+                    Text("No medical records found without prescriptions")
+                } else {
+                    LazyColumn {
+                        items(medicalRecords) { record ->
+                            Text(
+                                text = record.second,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedRecord = record
+                                        showRecordsDialog = false
+                                    }
+                                    .padding(8.dp)
+                            )
+                        }
                     }
                 }
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { showPatientDialog = false }) {
+                TextButton(onClick = { showRecordsDialog = false }) {
                     Text("Cancel")
                 }
             }
@@ -222,6 +243,10 @@ fun PrescribeScreenForm(doctorId: String) {
     }
 }
 
+// Helper extension function to format Date
+fun Date.formatToString(): String {
+    return SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(this)
+}
 @Composable
 fun MedicationSearchDialog(
     onMedicationSelected: (Drug) -> Unit,
@@ -354,19 +379,28 @@ fun MedicationSearchDialog(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PrescribeScreen(fromCalendar: Boolean = false, patientId: String? = null) {
+fun PrescribeScreen(
+    fromCalendar: Boolean = false,
+    patientId: String? = null,
+    appointmentId: String? = null,
+    medicalRecordId: String? = null,
+    onDismiss: () -> Unit = {}
+) {
     val auth = FirebaseAuth.getInstance()
     val doctorEmail = auth.currentUser?.email ?: ""
     val doctorId = remember { mutableStateOf<String?>(null) }
     val db = FirebaseFirestore.getInstance()
+    val showErrorDialog = remember { mutableStateOf(false) }
 
+    // Load doctor ID
     LaunchedEffect(doctorEmail) {
         if (doctorEmail.isNotEmpty()) {
-            db.collection("doctors").whereEqualTo("e-mail", doctorEmail).get().addOnSuccessListener { documents ->
-                if (!documents.isEmpty) {
-                    doctorId.value = documents.documents[0].id
+            db.collection("doctors").whereEqualTo("e-mail", doctorEmail).get()
+                .addOnSuccessListener { documents ->
+                    if (!documents.isEmpty) {
+                        doctorId.value = documents.documents[0].id
+                    }
                 }
-            }
         }
     }
 
@@ -374,40 +408,93 @@ fun PrescribeScreen(fromCalendar: Boolean = false, patientId: String? = null) {
         topBar = {
             TopAppBar(
                 title = { Text("Prescribe Medication") },
-                modifier = Modifier.padding(top = 16.dp)
+                modifier = Modifier.padding(top = 16.dp),
+                navigationIcon = {
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
             )
         }
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
             doctorId.value?.let { id ->
                 if (fromCalendar && patientId != null) {
-                    PrescribeScreenWithGivenPatient(doctorId = id, patientId = patientId)
+                    // Load medical record ID if not provided
+                    if (medicalRecordId == null) {
+                        LaunchedEffect(patientId) {
+                            db.collection("medical_records")
+                                .whereEqualTo("user_id", patientId)
+                                .limit(1)
+                                .get()
+                                .addOnSuccessListener { result ->
+                                    if (!result.isEmpty) {
+                                        val medicalRecordId = result.documents[0].id
+                                        // Now we can show the prescription form
+                                    } else {
+                                        showErrorDialog.value = true
+                                    }
+                                }
+                        }
+                    }
+
+                    PrescribeScreenWithGivenPatient(
+                        doctorId = id,
+                        patientId = patientId,
+                        appointmentId = appointmentId,
+                        medicalRecordId = medicalRecordId ?: "", // Handle null case
+                        onDismiss = onDismiss
+                    )
                 } else {
-                    PrescribeScreenForm(doctorId = id)
+                    PrescribeScreenForm(doctorId = id, medicalRecordId = medicalRecordId ?: "")
                 }
+            } ?: run {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
         }
     }
+
+    if (showErrorDialog.value) {
+        AlertDialog(
+            onDismissRequest = { showErrorDialog.value = false },
+            title = { Text("Error") },
+            text = { Text("Medical record not found for this patient") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showErrorDialog.value = false
+                    onDismiss()
+                }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
 }
+
 
 private fun addPrescription(
     drug: Drug,
     dosage: String,
     amount: String,
-    prescription: Prescription
-){
+    prescription: Prescription,
+    medicalRecordId: String
+) {
     uploadPrescriptionToStorage(
         medication = drug,
         dosage = dosage,
         quantity = amount,
-        prescription = prescription
+        prescription = prescription,
+        medicalRecordId = medicalRecordId
     )
 }
 
 @Composable
 fun PrescribeScreenWithGivenPatient(
     doctorId: String,
-    patientId: String
+    patientId: String,
+    appointmentId: String? = null,
+    medicalRecordId: String? = null,
+    onDismiss: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
@@ -422,6 +509,20 @@ fun PrescribeScreenWithGivenPatient(
 
     var isLoading by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
+    var patientName by remember { mutableStateOf("Loading...") }
+
+    LaunchedEffect(patientId) {
+        FirebaseFirestore.getInstance()
+            .collection("users")
+            .document(patientId)
+            .get()
+            .addOnSuccessListener { doc ->
+                patientName = "${doc.getString("name") ?: "Unknown"} ${doc.getString("surname") ?: ""}".trim()
+            }
+            .addOnFailureListener {
+                patientName = "Unknown"
+            }
+    }
 
     Column(modifier = Modifier.padding(16.dp)) {
         Column(
@@ -430,22 +531,10 @@ fun PrescribeScreenWithGivenPatient(
                 .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
-            Text("Patient: ${remember { mutableStateOf("Loading...") }.apply {
-                LaunchedEffect(patientId) {
-                    FirebaseFirestore.getInstance()
-                        .collection("users")
-                        .document(patientId)
-                        .get()
-                        .addOnSuccessListener { doc ->
-                            value = "${doc.getString("name") ?: "Unknown"} ${doc.getString("surname") ?: ""}".trim()
-                        }
-                        .addOnFailureListener {
-                            value = "Unknown"
-                        }
-                }
-            }.value}")
+            Text("Patient: $patientName")
 
             Spacer(modifier = Modifier.height(16.dp))
+
             // Medication selection button
             Button(
                 onClick = { showMedicationDialog = true },
@@ -501,14 +590,15 @@ fun PrescribeScreenWithGivenPatient(
                         user_id = patientId,
                         issued_date = Timestamp.now(),
                         link_to_storage = "link",
-                        appointment_id = "appointmentid",
+                        appointment_id = appointmentId ?: "appointmentid",
                         doctor_comment = instructions,
                     )
                     addPrescription(
                         drug = selectedMedication!!,
                         dosage = dosage,
                         amount = amount,
-                        prescription = prescription
+                        prescription = prescription,
+                        medicalRecordId = medicalRecordId.toString()
                     )
                     showSuccessDialog = true
                 }
@@ -522,11 +612,17 @@ fun PrescribeScreenWithGivenPatient(
 
     if (showSuccessDialog) {
         AlertDialog(
-            onDismissRequest = { showSuccessDialog = false },
+            onDismissRequest = {
+                showSuccessDialog = false
+                onDismiss()
+            },
             title = { Text("Prescription Created") },
             text = { Text("The prescription has been successfully created.") },
             confirmButton = {
-                TextButton(onClick = { showSuccessDialog = false }) {
+                TextButton(onClick = {
+                    showSuccessDialog = false
+                    onDismiss()
+                }) {
                     Text("OK")
                 }
             }
@@ -544,4 +640,3 @@ fun PrescribeScreenWithGivenPatient(
         )
     }
 }
-

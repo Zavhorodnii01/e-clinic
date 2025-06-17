@@ -62,7 +62,7 @@ fun AppointmentsScreen(doctorId: String) {
         )
     }
 
-    // Function to complete the appointment
+    // Function to complete the appointment - MODIFIED VERSION
     fun completeAppointment(appointment: Appointment) {
         Log.d(TAG, "Completing appointment: ${appointment.id}")
         completingAppointmentId = appointment.id
@@ -75,6 +75,10 @@ fun AppointmentsScreen(doctorId: String) {
                 if (task.isSuccessful) {
                     Log.d(TAG, "Appointment ${appointment.id} completed successfully")
                     Toast.makeText(context, "Appointment completed", Toast.LENGTH_SHORT).show()
+
+                    // Manually update local state for immediate UI feedback
+                    upcomingAppointments.removeAll { it.id == appointment.id }
+                    pastAppointments.add(appointment.copy(status = "FINISHED"))
                 } else {
                     Log.e(TAG, "Failed to complete appointment: ${task.exception?.message}")
                     Toast.makeText(context, "Failed to complete appointment", Toast.LENGTH_SHORT).show()
@@ -82,7 +86,7 @@ fun AppointmentsScreen(doctorId: String) {
             }
     }
 
-    // Loading upcoming appointments
+    // Loading upcoming appointments - MODIFIED VERSION
     LaunchedEffect(doctorId) {
         Log.d(TAG, "Loading upcoming appointments for doctor: $doctorId")
         isLoading = true
@@ -90,24 +94,26 @@ fun AppointmentsScreen(doctorId: String) {
         try {
             FirebaseFirestore.getInstance()
                 .collection("appointments")
-                .whereEqualTo("doctor_id", doctorId) // Match your Firestore field name
+                .whereEqualTo("doctor_id", doctorId)
                 .whereEqualTo("status", "NOT_FINISHED")
-                .get()
-                .addOnSuccessListener { snapshot ->
-                    Log.d(TAG, "Upcoming appointments query completed")
-                    if (snapshot.isEmpty) {
-                        Log.d(TAG, "No upcoming appointments found")
-                    } else {
-                        Log.d(TAG, "Found ${snapshot.size()} upcoming appointments")
-                        for (document in snapshot.documents) {
+                .addSnapshotListener { snapshot, error ->  // Changed to snapshot listener
+                    error?.let {
+
+                        //this.error = "Failed to load appointments: ${it.localizedMessage}"
+                        isLoading = false
+                        return@addSnapshotListener
+                    }
+                    snapshot?.let {
+
+                        upcomingAppointments.clear()
+                        for (document in it.documents) {
                             try {
                                 val appointment = document.toObject(Appointment::class.java)
                                 appointment?.let {
-                                    Log.d(TAG, "Appointment details: $it")
+
                                     upcomingAppointments.add(it)
-                                    // Fetch patient info if not cached
-                                    if (!patientsCache.containsKey(it.user_id)) { // Match your Firestore field name
-                                        Log.d(TAG, "Fetching patient info for ${it.user_id}")
+                                    if (!patientsCache.containsKey(it.user_id)) {
+
                                         fetchPatientInfo(it.user_id, patientsCache) {
                                             patientsLoading = false
                                         }
@@ -117,42 +123,40 @@ fun AppointmentsScreen(doctorId: String) {
                                 Log.e(TAG, "Error parsing document: ${e.message}")
                             }
                         }
+                        isLoading = false
                     }
-                    isLoading = false
-                }
-                .addOnFailureListener { e ->
-                    Log.e(TAG, "Error loading appointments: ${e.message}")
-                    error = "Failed to load appointments: ${e.localizedMessage}"
-                    isLoading = false
                 }
         } catch (e: Exception) {
-            error = "Exception: ${e.localizedMessage}"
-            Log.e(TAG, "Exception loading upcoming appointments: ${e.message}")
+            //this.error = "Exception: ${e.localizedMessage}"
+
             isLoading = false
         }
     }
-    // Loading past appointments
+
+    // Loading past appointments - MODIFIED VERSION
     LaunchedEffect(doctorId) {
-        Log.d(TAG, "Loading past appointments for doctor: $doctorId")
+
         try {
             FirebaseFirestore.getInstance()
                 .collection("appointments")
-                .whereEqualTo("doctor_id", doctorId) // Match your Firestore field name
+                .whereEqualTo("doctor_id", doctorId)
                 .whereIn("status", listOf("FINISHED", "CANCELLED"))
-                .get()
-                .addOnSuccessListener { snapshot ->
-                    Log.d(TAG, "Past appointments query completed")
-                    if (snapshot.isEmpty) {
-                        Log.d(TAG, "No past appointments found")
-                    } else {
-                        Log.d(TAG, "Found ${snapshot.size()} past appointments")
+                .addSnapshotListener { snapshot, error ->  // Changed to snapshot listener
+                    error?.let {
+
+                        //this.error = "Failed to load past appointments: ${it.localizedMessage}"
+                        return@addSnapshotListener
+                    }
+
+                    snapshot?.let {
+                        Log.d(TAG, "Past appointments update received")
                         pastAppointments.clear()
-                        for (document in snapshot.documents) {
+                        for (document in it.documents) {
                             try {
                                 val appointment = document.toObject(Appointment::class.java)
                                 appointment?.let {
                                     pastAppointments.add(it)
-                                    if (!patientsCache.containsKey(it.user_id)) { // Match your Firestore field name
+                                    if (!patientsCache.containsKey(it.user_id)) {
                                         patientsLoading = true
                                         fetchPatientInfo(it.user_id, patientsCache) {
                                             patientsLoading = false
@@ -165,15 +169,11 @@ fun AppointmentsScreen(doctorId: String) {
                         }
                     }
                 }
-                .addOnFailureListener { e ->
-                    Log.e(TAG, "Error loading past appointments: ${e.message}")
-                    error = "Failed to load past appointments: ${e.localizedMessage}"
-                }
         } catch (e: Exception) {
-            error = "Exception: ${e.localizedMessage}"
-            Log.e(TAG, "Exception loading past appointments: ${e.message}")
+
         }
     }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
