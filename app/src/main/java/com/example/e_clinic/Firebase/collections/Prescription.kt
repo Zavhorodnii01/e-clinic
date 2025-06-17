@@ -7,9 +7,9 @@ data class Prescription(
     @DocumentId
     val id: String = "",
     val doctor_id: String = "",
-    val user_id: String = "",
+    var user_id: String = "",
     val issued_date: Timestamp? = null,
     var link_to_storage: String = "",
-    val appointment_id: String = "",
+    var appointment_id: String = "",
     val doctor_comment: String = "",
 )

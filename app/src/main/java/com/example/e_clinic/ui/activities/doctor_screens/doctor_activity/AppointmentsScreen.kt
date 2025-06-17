@@ -17,12 +17,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.e_clinic.BuildConfig
 import com.example.e_clinic.Firebase.collections.Appointment
 import com.example.e_clinic.Firebase.collections.User
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.zegocloud.zimkit.common.ZIMKitRouter
 import com.zegocloud.zimkit.common.enums.ZIMKitConversationType
+import com.zegocloud.zimkit.services.ZIMKit
+import im.zego.connection.internal.ZegoConnectionImpl
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -47,22 +51,98 @@ fun AppointmentsScreen(doctorId: String) {
         Log.d(TAG, "Initializing appointments screen")
     }
 
-    // Function to open chat with the patient
-    fun openChatWithPatient(appointment: Appointment) {
-        Log.d(TAG, "Attempting to chat with patient: ${appointment.user_id}")
-        val patientId = appointment.user_id
-        if (patientId.isBlank()) {
-            Toast.makeText(context, "Invalid patient ID", Toast.LENGTH_SHORT).show()
+    fun openChatWithPatient(appt: Appointment) {
+        Log.d("ChatDebug", "Starting openChatWithPatient()")
+
+        // 1. Validate appointment
+        if (appt == null) {
+            Log.e("ChatDebug", "ERROR: Null appointment object")
+            Toast.makeText(context, "Invalid appointment data", Toast.LENGTH_LONG).show()
             return
         }
-        ZIMKitRouter.toMessageActivity(
-            context,
-            patientId,
-            ZIMKitConversationType.ZIMKitConversationTypePeer
-        )
-    }
 
-    // Function to complete the appointment
+        // 2. Validate patient ID
+        val patientId = appt.user_id?.trim() ?: ""
+        if (patientId.isBlank()) {
+            Log.e("ChatDebug", "ERROR: Blank patient ID in appointment: ${appt.toString()}")
+            Toast.makeText(context, "Invalid patient ID", Toast.LENGTH_LONG).show()
+            return
+        }
+        Log.d("ChatDebug", "Patient ID validated: ${patientId.take(4)}...")
+
+        // 3. Check Firebase auth
+        val firebaseUser = FirebaseAuth.getInstance().currentUser
+        if (firebaseUser == null) {
+            Log.e("ChatDebug", "ERROR: No authenticated Firebase user")
+            Toast.makeText(context, "Please sign in first", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        // 4. Prepare user info with guaranteed non-empty name
+        val selfId = firebaseUser.uid
+        val selfName = firebaseUser.displayName?.takeIf { it.isNotBlank() }
+            ?: firebaseUser.email?.substringBefore("@")?.takeIf { it.isNotBlank() }
+            ?: "User_${selfId.takeLast(4)}"  // Final fallback
+
+        Log.d("ChatDebug", "User Details - ID: ${selfId.take(4)}... | Name: $selfName")
+
+        // 5. Verify ZIMKit initialization
+        try {
+            val localUser = ZIMKit.getLocalUser()
+            Log.d("ChatDebug", "ZIMKit LocalUser: ${localUser?.id?.take(4)}...")
+
+            val readyBlock = {
+                Log.d("ChatDebug", "Navigating to chat with patient: ${patientId.take(4)}...")
+                try {
+                    ZIMKitRouter.toMessageActivity(
+                        context,
+                        patientId,
+                        ZIMKitConversationType.ZIMKitConversationTypePeer
+                    )
+                } catch (e: Exception) {
+                    Log.e("ChatDebug", "Failed to start chat activity: ${e.message}")
+                    Toast.makeText(context, "Failed to open chat", Toast.LENGTH_LONG).show()
+                }
+            }
+
+            // 6. Connection logic with enhanced error handling
+            if (localUser != null && localUser.id == selfId) {
+                Log.d("ChatDebug", "Already connected to ZIMKit")
+                readyBlock()
+            } else {
+                Log.d("ChatDebug", "Initiating ZIMKit connection...")
+                ZIMKit.connectUser(selfId, selfName, "") { err ->
+                    when {
+                        err == null || err.code.value() == 0 -> {
+                            Log.d("ChatDebug", "ZIMKit connection successful")
+                            readyBlock()
+                        }
+                        err.code.value() == 6000011 -> { // PARAM_INVALID
+                            Log.e("ChatDebug", "Invalid parameters - Name: '$selfName'")
+                            Toast.makeText(context,
+                                "Please set your display name in profile settings",
+                                Toast.LENGTH_LONG).show()
+                        }
+                        else -> {
+                            Log.e("ChatDebug",
+                                "Connection failed (${err.code}): ${err.message}\n" +
+                                        "Common fixes:\n" +
+                                        "1. Verify ZIMKit.init() was called\n" +
+                                        "2. Check Zego AppID/Signature\n" +
+                                        "3. Ensure network connectivity")
+
+                            Toast.makeText(context,
+                                "Chat service unavailable (${err.code})",
+                                Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("ChatDebug", "Critical error: ${e.javaClass.simpleName}\n${e.stackTraceToString()}")
+            Toast.makeText(context, "Chat system error occurred", Toast.LENGTH_LONG).show()
+        }
+    }    // Function to complete the appointment - MODIFIED VERSION
     fun completeAppointment(appointment: Appointment) {
         Log.d(TAG, "Completing appointment: ${appointment.id}")
         completingAppointmentId = appointment.id
@@ -75,6 +155,10 @@ fun AppointmentsScreen(doctorId: String) {
                 if (task.isSuccessful) {
                     Log.d(TAG, "Appointment ${appointment.id} completed successfully")
                     Toast.makeText(context, "Appointment completed", Toast.LENGTH_SHORT).show()
+
+                    // Manually update local state for immediate UI feedback
+                    upcomingAppointments.removeAll { it.id == appointment.id }
+                    pastAppointments.add(appointment.copy(status = "FINISHED"))
                 } else {
                     Log.e(TAG, "Failed to complete appointment: ${task.exception?.message}")
                     Toast.makeText(context, "Failed to complete appointment", Toast.LENGTH_SHORT).show()
@@ -82,7 +166,7 @@ fun AppointmentsScreen(doctorId: String) {
             }
     }
 
-    // Loading upcoming appointments
+    // Loading upcoming appointments - MODIFIED VERSION
     LaunchedEffect(doctorId) {
         Log.d(TAG, "Loading upcoming appointments for doctor: $doctorId")
         isLoading = true
@@ -90,24 +174,26 @@ fun AppointmentsScreen(doctorId: String) {
         try {
             FirebaseFirestore.getInstance()
                 .collection("appointments")
-                .whereEqualTo("doctor_id", doctorId) // Match your Firestore field name
+                .whereEqualTo("doctor_id", doctorId)
                 .whereEqualTo("status", "NOT_FINISHED")
-                .get()
-                .addOnSuccessListener { snapshot ->
-                    Log.d(TAG, "Upcoming appointments query completed")
-                    if (snapshot.isEmpty) {
-                        Log.d(TAG, "No upcoming appointments found")
-                    } else {
-                        Log.d(TAG, "Found ${snapshot.size()} upcoming appointments")
-                        for (document in snapshot.documents) {
+                .addSnapshotListener { snapshot, error ->  // Changed to snapshot listener
+                    error?.let {
+
+                        //this.error = "Failed to load appointments: ${it.localizedMessage}"
+                        isLoading = false
+                        return@addSnapshotListener
+                    }
+                    snapshot?.let {
+
+                        upcomingAppointments.clear()
+                        for (document in it.documents) {
                             try {
                                 val appointment = document.toObject(Appointment::class.java)
                                 appointment?.let {
-                                    Log.d(TAG, "Appointment details: $it")
+
                                     upcomingAppointments.add(it)
-                                    // Fetch patient info if not cached
-                                    if (!patientsCache.containsKey(it.user_id)) { // Match your Firestore field name
-                                        Log.d(TAG, "Fetching patient info for ${it.user_id}")
+                                    if (!patientsCache.containsKey(it.user_id)) {
+
                                         fetchPatientInfo(it.user_id, patientsCache) {
                                             patientsLoading = false
                                         }
@@ -117,42 +203,40 @@ fun AppointmentsScreen(doctorId: String) {
                                 Log.e(TAG, "Error parsing document: ${e.message}")
                             }
                         }
+                        isLoading = false
                     }
-                    isLoading = false
-                }
-                .addOnFailureListener { e ->
-                    Log.e(TAG, "Error loading appointments: ${e.message}")
-                    error = "Failed to load appointments: ${e.localizedMessage}"
-                    isLoading = false
                 }
         } catch (e: Exception) {
-            error = "Exception: ${e.localizedMessage}"
-            Log.e(TAG, "Exception loading upcoming appointments: ${e.message}")
+            //this.error = "Exception: ${e.localizedMessage}"
+
             isLoading = false
         }
     }
-    // Loading past appointments
+
+    // Loading past appointments - MODIFIED VERSION
     LaunchedEffect(doctorId) {
-        Log.d(TAG, "Loading past appointments for doctor: $doctorId")
+
         try {
             FirebaseFirestore.getInstance()
                 .collection("appointments")
-                .whereEqualTo("doctor_id", doctorId) // Match your Firestore field name
+                .whereEqualTo("doctor_id", doctorId)
                 .whereIn("status", listOf("FINISHED", "CANCELLED"))
-                .get()
-                .addOnSuccessListener { snapshot ->
-                    Log.d(TAG, "Past appointments query completed")
-                    if (snapshot.isEmpty) {
-                        Log.d(TAG, "No past appointments found")
-                    } else {
-                        Log.d(TAG, "Found ${snapshot.size()} past appointments")
+                .addSnapshotListener { snapshot, error ->  // Changed to snapshot listener
+                    error?.let {
+
+                        //this.error = "Failed to load past appointments: ${it.localizedMessage}"
+                        return@addSnapshotListener
+                    }
+
+                    snapshot?.let {
+                        Log.d(TAG, "Past appointments update received")
                         pastAppointments.clear()
-                        for (document in snapshot.documents) {
+                        for (document in it.documents) {
                             try {
                                 val appointment = document.toObject(Appointment::class.java)
                                 appointment?.let {
                                     pastAppointments.add(it)
-                                    if (!patientsCache.containsKey(it.user_id)) { // Match your Firestore field name
+                                    if (!patientsCache.containsKey(it.user_id)) {
                                         patientsLoading = true
                                         fetchPatientInfo(it.user_id, patientsCache) {
                                             patientsLoading = false
@@ -165,15 +249,11 @@ fun AppointmentsScreen(doctorId: String) {
                         }
                     }
                 }
-                .addOnFailureListener { e ->
-                    Log.e(TAG, "Error loading past appointments: ${e.message}")
-                    error = "Failed to load past appointments: ${e.localizedMessage}"
-                }
         } catch (e: Exception) {
-            error = "Exception: ${e.localizedMessage}"
-            Log.e(TAG, "Exception loading past appointments: ${e.message}")
+
         }
     }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier

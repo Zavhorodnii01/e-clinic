@@ -130,7 +130,7 @@ fun generatePrescription(medication: Drug, dosage: String, quantity: String, pre
     return stream.toByteArray()
 }
 
-fun uploadPrescriptionToStorage(prescription: Prescription, dosage: String,quantity: String, medication: Drug){
+fun uploadPrescriptionToStorage(prescription: Prescription, dosage: String,quantity: String, medication: Drug, medicalRecordId: String){
 
     // Get user and doctor names
     val userId = prescription.user_id ?: "UnknownUser"
@@ -155,11 +155,14 @@ fun uploadPrescriptionToStorage(prescription: Prescription, dosage: String,quant
                         // 3. Create a new document reference
                         val prescriptionRef = db.collection("prescriptions").document() // Auto-generate ID
 
+                        val medicalRecordRef = db.collection("medical_records").document(medicalRecordId)
+
                         // 4. Update the prescription object with the URL
                         prescription.link_to_storage = uri.toString()
 
                         // 5. Add the set() operation to the batch
                         batch.set(prescriptionRef, prescription)
+                        batch.update(medicalRecordRef, "prescription_id", prescriptionRef.id)
 
                         // 6. Commit the batch
                         batch.commit().addOnSuccessListener {

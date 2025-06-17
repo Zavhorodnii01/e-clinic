@@ -1,5 +1,6 @@
 package com.example.e_clinic.ui.activities.doctor_screens.doctor_activity
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -12,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,11 +27,13 @@ import com.example.e_clinic.Firebase.collections.Doctor
 import com.example.e_clinic.ZEGOCloud.launchZegoChat
 import com.example.e_clinic.services.Service
 import com.example.e_clinic.services.functions.doctorServices
+import com.example.e_clinic.ui.activities.doctor_screens.DoctorLogInActivity
+import com.example.e_clinic.ui.activities.user_screens.UserLogInActivity
 import com.example.e_clinic.ui.activities.user_screens.user_activity.SettingsScreen
 import com.example.e_clinic.ui.theme.EClinicTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import im.zego.connection.internal.ZegoConnectionImpl.context
+
 
 
 class DoctorActivity : ComponentActivity() {
@@ -85,6 +89,12 @@ fun MainScreen() {
                     IconButton(onClick = { showSettings = true }) {
                         Icon(Icons.Default.Menu, contentDescription = "Menu")
                     }
+                    IconButton(onClick = {FirebaseAuth.getInstance().signOut()
+                        val intent = Intent(context, DoctorLogInActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        context.startActivity(intent)}) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Logout")
+                    }
                 }
             )
         },
@@ -121,6 +131,7 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier, doctor:
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {
     val currentDestination = navController.currentBackStackEntryAsState().value?.destination?.route
+    val context = LocalContext.current
     NavigationBar {
         NavigationBarItem(
             icon = { Icon(Icons.Default.Home, null) },
@@ -141,10 +152,13 @@ fun BottomNavigationBar(navController: NavHostController) {
             onClick = { navController.navigate("services") }
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Default.Call, null) },
+            icon = { Icon(Icons.Default.AccountBox, null) },
             label = { Text("Chat") },
             selected = false,
-            onClick = { launchZegoChat(context) }
+            onClick = {
+
+                launchZegoChat(context)
+            }
         )
         NavigationBarItem(
             icon = { Icon(Icons.Default.Person, null) },
