@@ -37,10 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_clinic.R
 import com.example.e_clinic.services.PinManager
-import com.example.e_clinic.ui.activities.user_screens.user_activity.UserActivity
-import com.example.e_clinic.ui.activities.user_screens.PinEntryActivity
-import com.example.e_clinic.ui.activities.user_screens.SetPinAfterLoginActivity
-import com.example.e_clinic.ui.activities.user_screens.UserSignUpActivity
 import com.example.e_clinic.ui.theme.EClinicTheme
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -87,6 +83,7 @@ fun LogInScreen(
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
     val currentUser = auth.currentUser
+    val pinManager = PinManager(context)
 
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -109,7 +106,7 @@ fun LogInScreen(
                                     context.startActivity(intent)
                                 }
                                 .addOnFailureListener {
-                                    Toast.makeText(context, "Błąd pobierania danych użytkownika", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Fetching User Data Failed", Toast.LENGTH_SHORT).show()
                                 }
                         }
                     } else {
@@ -137,35 +134,6 @@ fun LogInScreen(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(12.dp)
         )
-
-//        if (currentUser != null) {
-//            Text("Zalogowano jako: ${currentUser.email}", fontSize = 14.sp)
-//            Spacer(modifier = Modifier.height(8.dp))
-//            Button(
-//                onClick = onContinueAsUser,
-//                modifier = Modifier.fillMaxWidth(),
-//                shape = RoundedCornerShape(8.dp)
-//            ) {
-//                Text("Kontynuuj jako ${currentUser.email}")
-//            }
-//            Spacer(modifier = Modifier.height(8.dp))
-//            OutlinedButton(
-//                onClick = {
-//                    auth.signOut()
-//                    GoogleSignIn.getClient(
-//                        context,
-//                        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-//                            .requestIdToken(context.getString(R.string.default_web_client_id))
-//                            .requestEmail()
-//                            .build()
-//                    ).signOut()
-//                },
-//                modifier = Modifier.fillMaxWidth()
-//            ) {
-//                Text("Wyloguj")
-//            }
-//            Spacer(modifier = Modifier.height(24.dp))
-//        }
 
         TextField(
             value = email,
@@ -202,7 +170,7 @@ fun LogInScreen(
                                     .document(user.uid)
                                     .get()
                                     .addOnSuccessListener { doc ->
-                                        val intent = if (doc.getBoolean("hasSetPin") == true) {
+                                        val intent = if (pinManager.getPin() != null) {
                                             Intent(context, PinEntryActivity::class.java)
                                         } else {
                                             Intent(context, SetPinAfterLoginActivity::class.java)

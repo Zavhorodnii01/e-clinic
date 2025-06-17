@@ -1,6 +1,7 @@
 package com.example.e_clinic.ui.activities.doctor_screens.doctor_activity
 
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +20,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -57,6 +60,9 @@ fun HomeScreen(){
     val appointments = remember { mutableStateListOf<Appointment>() }
     val todayAppointmentsCount = remember { mutableStateOf(0) }
     val doctorState = remember { mutableStateOf<String?>(null) }
+    var selectedAppointment = remember { mutableStateOf<Appointment?>(null) }
+    val showPrescribeScreen = remember { mutableStateOf(false) }
+    val currentAppointment = remember { mutableStateOf<Appointment?>(null) }
 
     LaunchedEffect(doctorEmail) {
         if (doctorEmail.isNotEmpty()) {
@@ -105,7 +111,7 @@ fun HomeScreen(){
             onAppointmentClick = { appointment ->
                 // Handle appointment click, e.g., navigate to appointment details
                 // For now, just print the appointment ID
-                println("Clicked on appointment: ${appointment.id}")
+                selectedAppointment.value = appointment
             }
         )
 
@@ -119,6 +125,102 @@ fun HomeScreen(){
             }
         }
     }
+
+    if (selectedAppointment.value != null) {
+        AlertDialog(
+            onDismissRequest = { selectedAppointment.value = null },
+            title = { Text(text = "Appointment Details") },
+            text = {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)){
+                        val patientName = remember(selectedAppointment.value?.user_id) { mutableStateOf("Loading...") }
+                        LaunchedEffect(selectedAppointment.value?.user_id) {
+                            selectedAppointment.value?.user_id?.let { userId ->
+                                FirebaseFirestore.getInstance()
+                                    .collection("users")
+                                    .document(userId)
+                                    .get()
+                                    .addOnSuccessListener { doc ->
+                                        val name = doc.getString("name") ?: ""
+                                        val surname = doc.getString("surname") ?: ""
+                                        patientName.value = "$name $surname"
+                                    }
+                                    .addOnFailureListener {
+                                        patientName.value = "Unknown"
+                                    }
+                            }
+                        }
+
+                        Text(
+                            text = "Patient: ${patientName.value}",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            text = "Date: ${
+                                selectedAppointment.value?.date?.toDate()?.let {
+                                    java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(it)
+                                } ?: "N/A"
+                            }",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "Status: ${selectedAppointment.value?.status}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(onClick = {
+                                //TODO: Connect to Zego
+                                println("Chat with patient: ${selectedAppointment.value?.id}")
+                                selectedAppointment.value = null
+                            }) {
+                                Text(text = "Chat")
+                            }
+                            Button(onClick = {
+                                selectedAppointment.value?.let { appointment ->
+                                    currentAppointment.value = appointment
+                                    showPrescribeScreen.value = true
+                                    selectedAppointment.value = null
+                                }
+                            }) {
+                                Text(text = "Prescribe")
+                            }
+                        }
+                        Button(onClick = {
+                            //TODO: Finalize appointment, change status to "FINISHED"
+                            println("Finalize appointment: ${selectedAppointment.value?.id}")
+                            selectedAppointment.value = null
+                        }) {
+                            Text(text = "Finish Appointment")
+                        }
+                    }
+                }
+            },
+            confirmButton = { }
+        )
+    }
+
+    if (showPrescribeScreen.value && currentAppointment.value != null) {
+        // Display the prescription screen from within composable context
+        PrescribeScreen(
+            fromCalendar = true,
+            patientId = currentAppointment.value!!.user_id
+        )
+    }
+
 }
 
 @Composable

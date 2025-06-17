@@ -354,7 +354,7 @@ fun MedicationSearchDialog(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PrescribeScreen() {
+fun PrescribeScreen(fromCalendar: Boolean = false, patientId: String? = null) {
     val auth = FirebaseAuth.getInstance()
     val doctorEmail = auth.currentUser?.email ?: ""
     val doctorId = remember { mutableStateOf<String?>(null) }
@@ -380,7 +380,11 @@ fun PrescribeScreen() {
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
             doctorId.value?.let { id ->
-                PrescribeScreenForm(doctorId = id)
+                if (fromCalendar && patientId != null) {
+                    PrescribeScreenWithGivenPatient(doctorId = id, patientId = patientId)
+                } else {
+                    PrescribeScreenForm(doctorId = id)
+                }
             }
         }
     }
@@ -399,3 +403,145 @@ private fun addPrescription(
         prescription = prescription
     )
 }
+
+@Composable
+fun PrescribeScreenWithGivenPatient(
+    doctorId: String,
+    patientId: String
+) {
+    val context = LocalContext.current
+    val scrollState = rememberScrollState()
+    val db = FirebaseFirestore.getInstance()
+
+    var selectedMedication by remember { mutableStateOf<Drug?>(null) }
+    var showMedicationDialog by rememberSaveable { mutableStateOf(false) }
+
+    var dosage by rememberSaveable { mutableStateOf("") }
+    var amount by rememberSaveable { mutableStateOf("1") }
+    var instructions by rememberSaveable { mutableStateOf("") }
+
+    var isLoading by remember { mutableStateOf(false) }
+    var showSuccessDialog by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(scrollState)
+                .padding(16.dp)
+        ) {
+            Text("Patient: ${remember { mutableStateOf("Loading...") }.apply {
+                LaunchedEffect(patientId) {
+                    FirebaseFirestore.getInstance()
+                        .collection("users")
+                        .document(patientId)
+                        .get()
+                        .addOnSuccessListener { doc ->
+                            value = "${doc.getString("name") ?: "Unknown"} ${doc.getString("surname") ?: ""}".trim()
+                        }
+                        .addOnFailureListener {
+                            value = "Unknown"
+                        }
+                }
+            }.value}")
+
+            Spacer(modifier = Modifier.height(16.dp))
+            // Medication selection button
+            Button(
+                onClick = { showMedicationDialog = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(selectedMedication?.name ?: "Select Medication")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (selectedMedication != null) {
+                Text("Active Substance: ${selectedMedication!!.activeSubstance}")
+                Text("Form: ${selectedMedication!!.form}")
+                Text("Type of Prescription: ${selectedMedication!!.typeOfPrescription}")
+                Text("Amount of Substance: ${selectedMedication!!.amountOfSubstance}")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = amount,
+                onValueChange = { amount = it.filter { c -> c.isDigit() }.take(2) },
+                label = { Text("Amount (boxes)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = dosage,
+                onValueChange = { dosage = it },
+                label = { Text("Dosage") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = instructions,
+                onValueChange = { instructions = it },
+                label = { Text("Instructions") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        Button(
+            onClick = {
+                if (selectedMedication != null && dosage.isNotBlank()) {
+                    val prescription = Prescription(
+                        doctor_id = doctorId,
+                        user_id = patientId,
+                        issued_date = Timestamp.now(),
+                        link_to_storage = "link",
+                        appointment_id = "appointmentid",
+                        doctor_comment = instructions,
+                    )
+                    addPrescription(
+                        drug = selectedMedication!!,
+                        dosage = dosage,
+                        amount = amount,
+                        prescription = prescription
+                    )
+                    showSuccessDialog = true
+                }
+            },
+            enabled = selectedMedication != null && dosage.isNotBlank(),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Prescribe")
+        }
+    }
+
+    if (showSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = { showSuccessDialog = false },
+            title = { Text("Prescription Created") },
+            text = { Text("The prescription has been successfully created.") },
+            confirmButton = {
+                TextButton(onClick = { showSuccessDialog = false }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    // Medication selection dialog
+    if (showMedicationDialog) {
+        MedicationSearchDialog(
+            onMedicationSelected = { drug ->
+                selectedMedication = drug
+                showMedicationDialog = false
+            },
+            onDismiss = { showMedicationDialog = false }
+        )
+    }
+}
+

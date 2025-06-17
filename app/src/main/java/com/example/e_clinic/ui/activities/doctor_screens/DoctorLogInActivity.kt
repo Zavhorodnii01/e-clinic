@@ -50,7 +50,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.e_clinic.services.PinManager
 import com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.DoctorActivity
+import com.example.e_clinic.ui.activities.user_screens.PinEntryActivity
+import com.example.e_clinic.ui.activities.user_screens.SetPinAfterLoginActivity
 //import com.example.e_clinic.ui.activities.doctor_screens.DoctorLogInActivity
 import com.example.e_clinic.ui.theme.EClinicTheme
 import com.google.firebase.auth.FirebaseAuth
@@ -59,7 +62,15 @@ import kotlinx.coroutines.delay
 
 class DoctorLogInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        val pinManager = PinManager(this)
+        val auth = FirebaseAuth.getInstance()
+        val currentUser = auth.currentUser
         super.onCreate(savedInstanceState)
+        if (pinManager.getPin() != null && currentUser != null) {
+            val intent = (Intent(this, DoctorPinEntryActivity::class.java))
+            startActivity(intent)
+            finish()
+        }
         enableEdgeToEdge()
         setContent {
             EClinicTheme {
@@ -75,8 +86,8 @@ class DoctorLogInActivity : ComponentActivity() {
                         startActivity(intent)
                     },*/
                     onSignInSuccess = {
-                        val intent = Intent(this, DoctorActivity::class.java)
-                        startActivity(intent)
+                        startActivity(Intent(this, DoctorPinEntryActivity::class.java))
+                        finish()
                     }
                 )
 
@@ -98,6 +109,7 @@ fun LogInScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
     var logInStatus by remember { mutableStateOf("") }
+    val pinManager = PinManager(context)
 
     Column(
         modifier = Modifier
@@ -107,7 +119,7 @@ fun LogInScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Welcome to e clinic",
+            text = "Welcome to eClinic",
             fontSize = MaterialTheme.typography.headlineSmall.fontSize,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(12.dp)
@@ -150,7 +162,12 @@ fun LogInScreen(
                                         val isAdmin = document.getBoolean("admin") ?: false
                                         if (!isAdmin) {
                                             logInStatus = ""
-                                            onSignInSuccess()
+                                            val intent = if (pinManager.getPin() != null) {
+                                                Intent(context, DoctorPinEntryActivity::class.java)
+                                            } else {
+                                                Intent(context, SetDoctorPinAfterLoginActivity::class.java)
+                                            }
+                                            context.startActivity(intent)
                                         } else {
                                             FirebaseAuth.getInstance().signOut()
                                             errorMessage = "You are not authorized as a user."
@@ -169,26 +186,12 @@ fun LogInScreen(
                     }
 
             },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFFFD700),
-                contentColor = Color.Black
-            ),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp)
         ) {
             Text("Sign In", fontSize = 16.sp, fontWeight = FontWeight.Medium)
         }
 
-        /*OutlinedButton(
-            onClick = onSignUpClick,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Color(0xFFE0B400)
-            )
-        ) {
-            Text("Sign Up")
-        }*/
 
         Spacer(modifier = Modifier.padding(8.dp))
 
@@ -207,10 +210,6 @@ fun LogInScreen(
                     errorMessage = "Please enter your email address to reset your password"
                 }
             },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFE0B400),
-                contentColor = Color.White
-            ),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp)
         ) {
@@ -218,23 +217,6 @@ fun LogInScreen(
         }
 
         Spacer(modifier = Modifier.height(20.dp))
-
-
-        Button(
-            onClick = {
-                val intent = Intent(context, DoctorLogInActivity::class.java)
-                context.startActivity(intent)
-            },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFE0B400),
-                contentColor = Color.White
-            ),
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text("I am admin", fontSize = 16.sp, fontWeight = FontWeight.Medium)
-        }
-
 
         LaunchedEffect(errorMessage, successMessage) {
             if (errorMessage != null || successMessage != null) {
@@ -284,11 +266,4 @@ fun LogInScreen(
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    // Text(
-    //     text = logInStatus,
-    //     modifier = Modifier.fillMaxWidth(),
-    //     color = Color(0xFF0073CE),
-    //     fontSize = 16.sp,
-    //     textAlign = TextAlign.Center
-    // )
 }

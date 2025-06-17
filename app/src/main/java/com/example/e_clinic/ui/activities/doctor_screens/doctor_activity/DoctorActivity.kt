@@ -109,6 +109,11 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier, doctor:
         //composable()
         composable("profile") { ProfileScreen() }
         composable("settings") { SettingsScreen(onClose = {}) }
+        composable("prescribe/{fromCalendar}/{patientId}") { backStackEntry ->
+            val fromCalendar = backStackEntry.arguments?.getString("fromCalendar")?.toBoolean() ?: false
+            val patientId = backStackEntry.arguments?.getString("patientId")
+            PrescribeScreen(fromCalendar = fromCalendar, patientId = patientId)
+        }
     }
 }
 
