@@ -74,9 +74,12 @@
             android:name=".ui.activities.user_screens.PrescriptionListActivity" />
         <activity
             android:name=".ui.activities.user_screens.SetPinAfterLoginActivity"
-            android:exported="false" />
+            android:exported="true" />
         <activity
             android:name=".ui.activities.doctor_screens.DoctorPinEntryActivity"
+            android:exported="true" />
+        <activity
+            android:name=".ui.activities.doctor_screens.SetDoctorPinAfterLoginActivity"
             android:exported="true" />
 
     </application>

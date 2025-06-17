@@ -2,6 +2,7 @@ package com.example.e_clinic.ui.activities.admin_screens
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -98,34 +99,31 @@ fun AdminLoginScreen() {
                         isLoading = false
                         if (task.isSuccessful) {
                             val user = auth.currentUser
-                            val uid = user?.uid
-
-                            if (uid != null) {
-                                db.collection("administrators").document(uid).get()
-                                    .addOnSuccessListener { document ->
-                                        val role = document.getString("role")
-                                        if (document.exists() && role == "admin") {
-                                            context.startActivity(
-                                                Intent(context, AdminActivity::class.java)
-                                            )
-                                            (context as? ComponentActivity)?.finish()
-                                        } else {
-                                            errorMessage = "Access denied: Admin privileges required"
-                                            auth.signOut()
-                                        }
-                                    }
-                                    .addOnFailureListener { e ->
-                                        errorMessage = "Failed to verify admin: ${e.message}"
-                                        auth.signOut()
-                                    }
-                            } else {
+                            val uid = user?.uid ?: run {
                                 errorMessage = "Authentication error: Missing UID"
+                                return@addOnCompleteListener
                             }
+
+                            db.collection("administrators").document(uid).get()
+                                .addOnSuccessListener { document ->
+                                    if (document.exists() && document.getString("role") == "admin") {
+                                        // Success: Navigate to AdminActivity
+                                        context.startActivity(Intent(context, AdminActivity::class.java))
+                                        (context as? ComponentActivity)?.finish()
+                                    } else {
+                                        errorMessage = "Access denied: Admin privileges required"
+                                        auth.signOut() // Force logout
+                                    }
+                                }
+                                .addOnFailureListener { e ->
+                                    errorMessage = "Database error: ${e.message}"
+                                    Log.e("AdminLogin", "Firestore error", e)
+                                    auth.signOut()
+                                }
                         } else {
                             errorMessage = "Login failed: ${task.exception?.message}"
                         }
-                    }
-            },
+                    }            },
             modifier = Modifier.fillMaxWidth(),
             enabled = !isLoading
         ) {

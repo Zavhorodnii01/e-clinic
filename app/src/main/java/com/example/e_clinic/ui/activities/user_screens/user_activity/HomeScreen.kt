@@ -277,5 +277,3 @@ fun NextAppointmentItem(
     }
 }
 
-
-

@@ -105,10 +105,11 @@ dependencies {
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     // ZEGOCLOUD In-App Chat
-    implementation("com.github.ZEGOCLOUD:zego_uikit_signaling_plugin_android:2.9.10")
-    implementation("com.github.ZEGOCLOUD:zego_inapp_chat_uikit_android:2.8.9"){
+    implementation("com.github.ZEGOCLOUD:zego_inapp_chat_uikit_android:+") {
         exclude(group = "com.github.ZEGOCLOUD", module = "zego_uikit_signaling_plugin_android")
     }
+
+    implementation ("com.github.Zavhorodnii01:zego_uikit_signaling_plugin_android:v1.0.0")
 
     // Accompanist (Zaktualizowana wersja)
     implementation("com.google.accompanist:accompanist-pager:0.33.2-alpha")

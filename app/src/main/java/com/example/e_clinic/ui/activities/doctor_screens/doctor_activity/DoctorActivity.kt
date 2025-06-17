@@ -1,6 +1,7 @@
 package com.example.e_clinic.ui.activities.doctor_screens.doctor_activity
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -30,6 +31,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import im.zego.connection.internal.ZegoConnectionImpl.context
 
+
 class DoctorActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,6 +52,7 @@ fun MainScreen() {
     var showSettings by remember { mutableStateOf(false) }
     var doctorName by remember { mutableStateOf("Loading...") }
     val doctor = Doctor()
+    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     // Fetch doctor name
     val user = FirebaseAuth.getInstance().currentUser
@@ -67,6 +70,8 @@ fun MainScreen() {
                 }
         }
     }
+
+    Log.d("DoctorIDDebug", "Doctor ID received: ${FirebaseAuth.getInstance().currentUser?.uid}")
 
     Scaffold(
         topBar = {
@@ -87,7 +92,7 @@ fun MainScreen() {
             BottomNavigationBar(navController)
         }
     ) { innerPadding ->
-        NavigationHost(navController, Modifier.padding(innerPadding), doctor)
+        NavigationHost(navController, Modifier.padding(innerPadding), doctor, userId)
     }
 
     if (showSettings) {
@@ -96,17 +101,12 @@ fun MainScreen() {
 }
 
 @Composable
-fun NavigationHost(navController: NavHostController, modifier: Modifier, doctor: Doctor) {
-    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: "no_user"
+fun NavigationHost(navController: NavHostController, modifier: Modifier, doctor: Doctor, userId: String) {
     NavHost(navController = navController, startDestination = "home", modifier = modifier) {
         composable("home") { HomeScreen() }
+        composable("appointments") { AppointmentsScreen(userId) }
         composable("services") { ServicesScreen(navController) }
         composable("prescriptions") { PrescribeScreen() }
-        /*composable("appointment_screen/{userId}") { backStackEntry ->
-            val uid = backStackEntry.arguments?.getString("userId") ?: ""
-            AppointmentScreen(userId = uid)
-        }*/
-        //composable()
         composable("profile") { ProfileScreen() }
         composable("settings") { SettingsScreen(onClose = {}) }
         composable("prescribe/{fromCalendar}/{patientId}") { backStackEntry ->
@@ -131,11 +131,8 @@ fun BottomNavigationBar(navController: NavHostController) {
         NavigationBarItem(
             icon = { Icon(Icons.Default.Check, null) },
             label = { Text("Appointments") },
-            selected = currentDestination?.startsWith("appointment_screen") == true,
-            onClick = {
-                val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
-                navController.navigate("appointment_screen/$userId")
-            }
+            selected = currentDestination == "appointments",
+            onClick = { navController.navigate("appointments") }
         )
         NavigationBarItem(
             icon = { Icon(Icons.Default.AccountBox, null) },
@@ -144,13 +141,10 @@ fun BottomNavigationBar(navController: NavHostController) {
             onClick = { navController.navigate("services") }
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Default.Check, null) },
+            icon = { Icon(Icons.Default.Call, null) },
             label = { Text("Chat") },
             selected = false,
-            onClick = {
-                //val context = LocalContext.current
-                launchZegoChat(context)
-            }
+            onClick = { launchZegoChat(context) }
         )
         NavigationBarItem(
             icon = { Icon(Icons.Default.Person, null) },
@@ -161,6 +155,7 @@ fun BottomNavigationBar(navController: NavHostController) {
     }
 }
 
+// Other existing composables (ServiceListItem, AppointmentItem, etc.) remain in this file
 @Composable
 fun AppointmentItem(title: String, description: String) {
     var checked by remember { mutableStateOf(false) }
