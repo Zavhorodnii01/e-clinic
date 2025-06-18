@@ -107,44 +107,71 @@ fun HomeScreen(){
 
     // TODO TRANSACTION
     fun finishAppointment(appointment: Appointment) {
+        // First check if appointment time has passed (with 5 second buffer)
+        val currentTime = Timestamp.now()
+        val appointmentTime = appointment.date ?: run {
+            Toast.makeText(context, "Invalid appointment time", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Check if appointment time is in the future (even by 5 seconds)
+        if (appointmentTime.seconds > currentTime.seconds ||
+            (appointmentTime.seconds == currentTime.seconds && appointmentTime.nanoseconds > currentTime.nanoseconds)) {
+            Toast.makeText(
+                context,
+                "Cannot finish future appointments",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        // Only proceed if appointment is in the past
         val record = MedicalRecord(
-            // Use the same ID as the appointment
-            appointment_id = appointment.id, // Assuming it's a Timestamp
+            appointment_id = appointment.id,
             user_id = appointment.user_id,
             doctor_id = doctorState.value ?: "",
             date = appointment.date,
-            prescription_id = "", // You can fill this in later after prescription is added
-            doctors_notes = "" // You can allow doctors to edit notes later
+            prescription_id = "",
+            doctors_notes = ""
         )
 
-
-        // Create a new medical record
         val db = FirebaseFirestore.getInstance()
         val recordRef = db.collection("medical_records").document()
         val appointmentRef = db.collection("appointments").document(appointment.id)
         medicalRecordId.value = recordRef.id
+
         db.runTransaction { transaction ->
+            // Verify again in transaction to prevent race conditions
+            val currentAppointment = transaction.get(appointmentRef)
+            val apptTime = currentAppointment.getTimestamp("date")
+
+            if (apptTime != null && (apptTime.seconds > currentTime.seconds ||
+                        (apptTime.seconds == currentTime.seconds && apptTime.nanoseconds > currentTime.nanoseconds))) {
+                throw Exception("Appointment is in the future")
+            }
+
             transaction.set(recordRef, record)
             transaction.update(appointmentRef, "status", "FINISHED")
             null
         }.addOnSuccessListener {
             Toast.makeText(context, "Appointment finished", Toast.LENGTH_SHORT).show()
-
             doctorState.value?.let { doctorId ->
                 appointmentRepository.getAppointmentsForDoctor(doctorId) { fetchedAppointments ->
                     appointments.clear()
                     appointments.addAll(fetchedAppointments)
                 }
             }
-
             currentAppointment.value = null
         }.addOnFailureListener { e ->
-            Toast.makeText(context, "Transaction failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            val message = when (e.message) {
+                "Appointment is in the future" -> "Cannot finish future appointments"
+                else -> "Transaction failed: ${e.message}"
+            }
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             currentAppointment.value = null
         }
     }
-
-        Column(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
