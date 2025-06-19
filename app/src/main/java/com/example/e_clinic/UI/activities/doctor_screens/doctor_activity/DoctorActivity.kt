@@ -4,10 +4,8 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -31,31 +29,56 @@ import com.example.e_clinic.UI.theme.EClinicTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import android.Manifest
+import android.app.Activity
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
 import com.google.firebase.messaging.FirebaseMessaging
+import android.app.AlertDialog
+import android.widget.Toast
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Appointment
+import com.example.e_clinic.Firebase.FirestoreDatabase.collections.MedicalRecord
+import com.example.e_clinic.Firebase.Repositories.AppointmentRepository
+import com.google.firebase.Timestamp
 
 
 class DoctorActivity : ComponentActivity() {
+    private lateinit var appointmentRepository: AppointmentRepository
+    private val appointments = mutableStateListOf<Appointment>()
+    private val doctorState = mutableStateOf<String?>(null)
+    private val medicalRecordId = mutableStateOf<String?>(null)
+    private val urgentAppointmentId = mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        appointmentRepository = AppointmentRepository()
+
+        // Handle notification permission and FCM token
+        setupNotifications()
+
         setContent {
             EClinicTheme {
-                MainScreen()
+                MaterialTheme {
+                    MainScreen()
+                }
             }
         }
 
+        checkIntent(intent)
+    }
+
+    private fun setupNotifications() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
                 101
             )
         }
 
-        // Update token if needed
         FirebaseMessaging.getInstance().token.addOnCompleteListener {
             if (it.isSuccessful) {
                 val token = it.result
@@ -64,20 +87,17 @@ class DoctorActivity : ComponentActivity() {
                     Firebase.firestore.collection("doctors")
                         .document(userId)
                         .update("fcmToken", token)
-                        .addOnSuccessListener {
-                            Log.d("DoctorActivity", "Token updated")
-                        }
                 }
             }
         }
+    }
 
-        // Check if opened via notification
-        val appointmentId = intent.getStringExtra("appointmentId")
-        appointmentId?.let {
-            Log.d("DoctorActivity", "Opened from FCM with appointmentId = $it")
-            // TODO: navigate to appointment detail screen
+    private fun checkIntent(intent: Intent?) {
+        intent?.getStringExtra("appointmentId")?.let { id ->
+            urgentAppointmentId.value = id
         }
-    }}
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,8 +108,33 @@ fun MainScreen() {
     var doctorName by remember { mutableStateOf("Loading...") }
     val doctor = Doctor()
     val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    val appointments = remember { mutableStateListOf<Appointment>() }
+    val urgentAppointmentId = remember { mutableStateOf<String?>(null) }
+    val doctorState = remember { mutableStateOf<String?>(null) }
+    val currentAppointment = remember { mutableStateOf<Appointment?>(null) }
+    val medicalRecordId = remember { mutableStateOf<String?>(null) }
+    val appointmentRepository = remember { AppointmentRepository() }
+    val showPrescriptionChoice = remember { mutableStateOf(false) }
+    val showPrescribeScreen = remember { mutableStateOf(false) }
+    val prescribePatientId = remember { mutableStateOf<String?>(null) }
+    val prescribeAppointmentId = remember { mutableStateOf<String?>(null) }
 
-    // Fetch doctor name
+
+    val intent = (context as? Activity)?.intent
+    val showDialog = intent?.getBooleanExtra("showFinishDialog", false) == true
+    val incomingAppointmentId = intent?.getStringExtra("appointmentId")
+
+    LaunchedEffect(showDialog, incomingAppointmentId) {
+        if (showDialog && incomingAppointmentId != null) {
+            urgentAppointmentId.value = incomingAppointmentId
+
+            // Clear the extras so dialog doesn't show again on recomposition
+            intent.removeExtra("showFinishDialog")
+            intent.removeExtra("appointmentId")
+        }
+    }
+
+    // Fetch doctor name and state
     val user = FirebaseAuth.getInstance().currentUser
     LaunchedEffect(user) {
         user?.email?.let { email ->
@@ -98,7 +143,9 @@ fun MainScreen() {
                 .whereEqualTo("e-mail", email)
                 .get()
                 .addOnSuccessListener { documents ->
-                    doctorName = documents.documents.firstOrNull()?.getString("name") ?: "Unknown Doctor"
+                    val doctorDoc = documents.documents.firstOrNull()
+                    doctorName = doctorDoc?.getString("name") ?: "Unknown Doctor"
+                    doctorState.value = doctorDoc?.id
                 }
                 .addOnFailureListener {
                     doctorName = "Unknown Doctor"
@@ -106,7 +153,107 @@ fun MainScreen() {
         }
     }
 
-    Log.d("DoctorIDDebug", "Doctor ID received: ${FirebaseAuth.getInstance().currentUser?.uid}")
+    fun finishAppointment(appointment: Appointment) {
+        val currentTime = Timestamp.now()
+        val appointmentTime = appointment.date ?: run {
+            Toast.makeText(context, "Invalid appointment time", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (appointmentTime.seconds > currentTime.seconds ||
+            (appointmentTime.seconds == currentTime.seconds && appointmentTime.nanoseconds > currentTime.nanoseconds)) {
+            Toast.makeText(
+                context,
+                "Cannot finish future appointments",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        val record = MedicalRecord(
+            appointment_id = appointment.id,
+            user_id = appointment.user_id,
+            doctor_id = doctorState.value ?: "",
+            date = appointment.date,
+            prescription_id = "",
+            doctors_notes = ""
+        )
+
+        val db = FirebaseFirestore.getInstance()
+        val recordRef = db.collection("medical_records").document()
+        val appointmentRef = db.collection("appointments").document(appointment.id)
+        medicalRecordId.value = recordRef.id
+
+        db.runTransaction { transaction ->
+            val currentAppointment = transaction.get(appointmentRef)
+            val apptTime = currentAppointment.getTimestamp("date")
+
+            if (apptTime != null && (apptTime.seconds > currentTime.seconds ||
+                        (apptTime.seconds == currentTime.seconds && apptTime.nanoseconds > currentTime.nanoseconds))) {
+                throw Exception("Appointment is in the future")
+            }
+
+            transaction.set(recordRef, record)
+            transaction.update(appointmentRef, "status", "FINISHED")
+            null
+        }.addOnSuccessListener {
+            Toast.makeText(context, "Appointment finished", Toast.LENGTH_SHORT).show()
+            doctorState.value?.let { doctorId ->
+                appointmentRepository.getAppointmentsForDoctor(doctorId) { fetchedAppointments ->
+                    appointments.clear()
+                    appointments.addAll(fetchedAppointments)
+                }
+            }
+            currentAppointment.value = null
+        }.addOnFailureListener { e ->
+            val message = when (e.message) {
+                "Appointment is in the future" -> "Cannot finish future appointments"
+                else -> "Transaction failed: ${e.message}"
+            }
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            currentAppointment.value = null
+        }
+    }
+
+    // Handle urgent appointments
+    val pendingAppointmentToFinish = remember { mutableStateOf<Appointment?>(null) }
+
+    LaunchedEffect(urgentAppointmentId.value) {
+        urgentAppointmentId.value?.let { appointmentId ->
+            val localAppointment = appointments.find { it.id == appointmentId }
+            if (localAppointment != null) {
+                pendingAppointmentToFinish.value = localAppointment
+            } else {
+                FirebaseFirestore.getInstance()
+                    .collection("appointments")
+                    .document(appointmentId)
+                    .get()
+                    .addOnSuccessListener { doc ->
+                        doc.toObject(Appointment::class.java)?.let { appt ->
+                            pendingAppointmentToFinish.value = appt
+                        }
+                    }
+            }
+        }
+    }
+
+// Separate Composable-side check for the dialog
+    pendingAppointmentToFinish.value?.let { appointment ->
+        AlertDialog.Builder(context)
+            .setTitle("Please mark this appointment as finished")
+            .setMessage("The appointment should have status as finished. Would you like to finish it now?")
+            .setCancelable(false)
+            .setPositiveButton("Yes, finish now") { _, _ ->
+        currentAppointment.value = appointment
+        showPrescriptionChoice.value = true
+        pendingAppointmentToFinish.value = null
+    }
+        .setNegativeButton("I'll do it later") { dialog, _ ->
+                dialog.dismiss()
+                pendingAppointmentToFinish.value = null
+            }
+            .show()
+    }
 
     Scaffold(
         topBar = {
@@ -120,10 +267,12 @@ fun MainScreen() {
                     IconButton(onClick = { showSettings = true }) {
                         Icon(Icons.Default.Menu, contentDescription = "Menu")
                     }
-                    IconButton(onClick = {FirebaseAuth.getInstance().signOut()
+                    IconButton(onClick = {
+                        FirebaseAuth.getInstance().signOut()
                         val intent = Intent(context, DoctorLogInActivity::class.java)
                         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        context.startActivity(intent)}) {
+                        context.startActivity(intent)
+                    }) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Logout")
                     }
                 }
@@ -136,10 +285,65 @@ fun MainScreen() {
         NavigationHost(navController, Modifier.padding(innerPadding), doctor, userId)
     }
 
+    if (showPrescriptionChoice.value && currentAppointment.value != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showPrescriptionChoice.value = false
+                currentAppointment.value = null
+            },
+            title = { Text("Finish Appointment") },
+            text = { Text("Would you like to add a prescription now?") },
+            confirmButton = {
+                Button(onClick = {
+                    val appointment = currentAppointment.value!!
+                    finishAppointment(appointment)
+                    showPrescriptionChoice.value = false
+                    prescribePatientId.value = appointment.user_id
+                    prescribeAppointmentId.value = appointment.id
+                    showPrescribeScreen.value = true
+                }) {
+                    Text("Yes, Add Prescription")
+                }
+            },
+            dismissButton = {
+                Button(onClick = {
+                    finishAppointment(currentAppointment.value!!)
+                    showPrescriptionChoice.value = false
+                    currentAppointment.value = null
+                }) {
+                    Text("No, Finish Without")
+                }
+            }
+        )
+    }
+
+    if (
+        showPrescribeScreen.value &&
+        prescribePatientId.value != null &&
+        prescribeAppointmentId.value != null &&
+        medicalRecordId.value != null
+    ) {
+        PrescribeScreen(
+            fromCalendar = true,
+            patientId = prescribePatientId.value!!,
+            appointmentId = prescribeAppointmentId.value!!,
+            medicalRecordId = medicalRecordId.value!!,
+            onDismiss = {
+                showPrescribeScreen.value = false
+                prescribePatientId.value = null
+                prescribeAppointmentId.value = null
+            }
+        )
+    }
+
+
+
     if (showSettings) {
         SettingsScreen(onClose = { showSettings = false })
     }
 }
+
+
 
 @Composable
 fun NavigationHost(navController: NavHostController, modifier: Modifier, doctor: Doctor, userId: String) {
@@ -200,29 +404,6 @@ fun BottomNavigationBar(navController: NavHostController) {
     }
 }
 
-// Other existing composables (ServiceListItem, AppointmentItem, etc.) remain in this file
-@Composable
-fun AppointmentItem(title: String, description: String) {
-    var checked by remember { mutableStateOf(false) }
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-
-        Column {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
-        }
-    }
-}
 
 @Composable
 fun ServiceListItem(
