@@ -460,11 +460,11 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
         FirebaseFirestore.getInstance()
             .collection("appointments")
             .document(appointment.id)
-            .update("status", "CANCELLED")
+            .update("status", "CANCELED")
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     cancelingAppointmentId = null
-                    Toast.makeText(context, "Appointment cancelled", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Appointment canceled", Toast.LENGTH_SHORT).show()
                 } else {
                     cancelingAppointmentId = null
                     Toast.makeText(context, "Failed to cancel appointment", Toast.LENGTH_SHORT).show()
@@ -947,7 +947,7 @@ fun AppointmentList(
                         Text(
                             text = "Status: ${appointment.status}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = if (appointment.status == "CANCELLED") Color.Red else Color.Unspecified
+                            color = if (appointment.status == "CANCELED") Color.Red else Color.Unspecified
                         )
                     }
 
@@ -1076,7 +1076,7 @@ private fun fetchDoctorInfo(
 /**
  * Cancels an appointment in a single Firestore transaction:
  *  1. Verifies the appointment is still active.
- *  2. Marks the appointment document as "CANCELLED".
+ *  2. Marks the appointment document as "CANCELED".
  *  3. Adds the timeslot back to the doctor's available_slots array
  *     (only if it is not already there).
  */
@@ -1108,10 +1108,10 @@ fun cancelAppointment(
                 val apptSnap   = txn.get(appointmentsRef)
                 val status     = apptSnap.getString("status")
 
-                if (status == null || status == "CANCELLED") {
-                    throw Exception("Appointment already cancelled or not found")
+                if (status == null || status == "CANCELED") {
+                    throw Exception("Appointment already canceled or not found")
                 }
-                txn.update(appointmentsRef, "status", "CANCELLED")
+                txn.update(appointmentsRef, "status", "CANCELED")
 
                 /* ----- 2b. return slot to available_slots ----- */
                 val slotSnap        = txn.get(timeslotRef)

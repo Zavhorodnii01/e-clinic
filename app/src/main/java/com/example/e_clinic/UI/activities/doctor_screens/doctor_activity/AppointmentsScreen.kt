@@ -542,7 +542,7 @@ fun AppointmentsScreen(doctorId: String) {
                     onDismiss = {
                         Log.d(TAG, "PrescribeScreen dismissed.")
                         showPrescribeScreen = false
-                        medicalRecordIdForPrescription = null // Clear ID after prescription is done/cancelled
+                        medicalRecordIdForPrescription = null // Clear ID after prescription is done/canceled
                         appointmentToComplete = null // Clear the completed appointment state
                     }
                 )
