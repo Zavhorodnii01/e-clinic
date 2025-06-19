@@ -64,6 +64,7 @@ import com.example.e_clinic.services.functions.appServices
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
+import com.example.e_clinic.ui.activities.doctor_screens.DoctorProfileScreen
 
 
 //TODO: UserActivity and functions
@@ -403,7 +404,7 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier, doctor:
         composable("prescriptions") { com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.PrescribeScreen()}
         composable("documents") { com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.DocumentScreen(
         ) }
-        composable("profile") { com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.ProfileScreen() }
+        composable("profile") { com.example.e_clinic.ui.activities.doctor_screens.DoctorProfileScreen() }
         composable("settings") {
             com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.SettingsScreen(
                 onClose = {})
