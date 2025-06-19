@@ -24,6 +24,7 @@ generativeai = "0.9.0"
 media3CommonKtx = "1.7.1"
 biometricKtx = "1.1.0"
 securityCryptoKtx = "1.0.0"
+firebaseMessagingKtx = "24.1.1"
 
 [libraries]
 androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
@@ -56,6 +57,7 @@ generativeai = { group = "com.google.ai.client.generativeai", name = "generative
 androidx-media3-common-ktx = { group = "androidx.media3", name = "media3-common-ktx", version.ref = "media3CommonKtx" }
 androidx-biometric-ktx = { group = "androidx.biometric", name = "biometric-ktx", version.ref = "biometricKtx" }
 androidx-security-crypto-ktx = { group = "androidx.security", name = "security-crypto-ktx", version.ref = "securityCryptoKtx" }
+firebase-messaging-ktx = { group = "com.google.firebase", name = "firebase-messaging-ktx", version.ref = "firebaseMessagingKtx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

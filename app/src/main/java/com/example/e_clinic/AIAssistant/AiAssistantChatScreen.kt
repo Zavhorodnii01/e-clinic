@@ -1,4 +1,4 @@
-package com.example.e_clinic.ui.activities.user_screens.user_activity
+package com.example.e_clinic.UI.activities.user_screens.user_activity
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,8 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.e_clinic.AIAssistant.BookingStep
 import com.example.e_clinic.BuildConfig
-import com.example.e_clinic.Firebase.collections.TimeSlot
-import com.example.e_clinic.Firebase.collections.specializations.DoctorSpecialization
+import com.example.e_clinic.Firebase.FirestoreDatabase.collections.TimeSlot
+import com.example.e_clinic.Firebase.FirestoreDatabase.collections.specializations.DoctorSpecialization
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldPath
@@ -23,21 +23,6 @@ import com.google.firebase.firestore.Transaction
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
-import java.util.*
-
-
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.unit.dp
-
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-
 import java.util.*
 
 @Composable

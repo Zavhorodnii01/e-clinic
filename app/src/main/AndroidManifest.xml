@@ -5,9 +5,11 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
-        android:name=".ui.activities.MyApplication"
+
+        android:name=".UI.activities.MyApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -17,6 +19,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Eclinic"
         tools:targetApi="31">
+
+        <!-- Firebase Messaging Service -->
+        <service
+            android:name=".Firebase.CloudFunctions.MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
 
         <!-- Remove the MainActivity entry if not used -->
         <!-- <activity
@@ -34,14 +45,14 @@
             android:name=".ZEGOCloud.LogActivity"
             android:exported="true" />
         <activity
-            android:name="com.example.e_clinic.ui.activities.user_screens.ChangePinActivity"
+            android:name="com.example.e_clinic.UI.activities.user_screens.ChangePinActivity"
             android:exported="true" />
         <activity
-            android:name="com.example.e_clinic.ui.activities.user_screens.PinEntryActivity"
+            android:name="com.example.e_clinic.UI.activities.user_screens.PinEntryActivity"
             android:exported="true" />
 
         <activity
-            android:name=".ui.activities.user_screens.UserLogInActivity"
+            android:name=".UI.activities.user_screens.UserLogInActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Eclinic">
@@ -52,35 +63,35 @@
         </activity>
 
         <activity
-            android:name=".ui.activities.user_screens.UserSignUpActivity"
+            android:name=".UI.activities.user_screens.UserSignUpActivity"
             android:exported="true" />
         <activity
-            android:name=".ui.activities.admin_screens.AdminActivity"
+            android:name=".UI.activities.admin_screens.AdminActivity"
             android:exported="true" />
         <activity
-            android:name=".ui.activities.doctor_screens.doctor_activity.DoctorActivity"
+            android:name=".UI.activities.doctor_screens.doctor_activity.DoctorActivity"
             android:exported="true" />
         <activity
-            android:name=".ui.activities.admin_screens.AdminLogInActivity"
+            android:name=".UI.activities.admin_screens.AdminLogInActivity"
             android:exported="true" />
         <activity
-            android:name=".ui.activities.user_screens.user_activity.UserActivity"
+            android:name=".UI.activities.user_screens.user_activity.UserActivity"
             android:exported="true" />
         <activity
-            android:name=".ui.activities.doctor_screens.DoctorLogInActivity"
+            android:name=".UI.activities.doctor_screens.DoctorLogInActivity"
             android:exported="true" />
         <activity
-            android:name=".ui.activities.doctor_screens.PrescribeScreen" />
+            android:name=".UI.activities.doctor_screens.PrescribeScreen" />
         <activity
-            android:name=".ui.activities.user_screens.PrescriptionListActivity" />
+            android:name=".UI.activities.user_screens.PrescriptionListActivity" />
         <activity
-            android:name=".ui.activities.user_screens.SetPinAfterLoginActivity"
+            android:name=".UI.activities.user_screens.SetPinAfterLoginActivity"
             android:exported="true" />
         <activity
-            android:name=".ui.activities.doctor_screens.DoctorPinEntryActivity"
+            android:name=".UI.activities.doctor_screens.DoctorPinEntryActivity"
             android:exported="true" />
         <activity
-            android:name=".ui.activities.doctor_screens.SetDoctorPinAfterLoginActivity"
+            android:name=".UI.activities.doctor_screens.SetDoctorPinAfterLoginActivity"
             android:exported="true" />
 
     </application>

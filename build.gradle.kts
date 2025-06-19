@@ -1,14 +1,24 @@
+// Top-level build file (for project settings)
+// Located in: android/build.gradle.kts
+
 buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
     dependencies {
-        classpath("com.google.gms:google-services:4.4.2") // Correct as a classpath dependency
-        // ... other classpath dependencies
+        classpath("com.google.gms:google-services:4.4.1") // Latest stable version
+        classpath("com.android.tools.build:gradle:8.2.2") // Android Gradle Plugin
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.20") // Kotlin version
+
+
     }
 }
 
-plugins { // Plugin declarations for the *project*
+plugins {
+    // These are project-level plugins (apply false)
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.compose) apply false
-
-    // DO NOT put google-services here!
+    // DO NOT include com.google.gms.google-services here
 }

@@ -8,7 +8,7 @@
     android:gravity="center"
     android:orientation="vertical"
     android:padding="16dp"
-    tools:context=".ui.ZEGOCloud.LogAct8ivity">
+    tools:context=".UI.ZEGOCloud.LogAct8ivity">
 
     <TextView
         android:layout_width="wrap_content"
