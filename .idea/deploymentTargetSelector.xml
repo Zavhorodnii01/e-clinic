@@ -7,7 +7,7 @@
       </SelectionState>
       <SelectionState runConfigName="DoctorLogInActivity">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-06-19T17:48:10.546030400Z">
+        <DropdownSelection timestamp="2025-06-20T15:00:46.230544600Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\38099\.android\avd\Pixel_9_API_35.avd" />
@@ -18,7 +18,7 @@
       </SelectionState>
       <SelectionState runConfigName="DoctorLogInActivity">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-06-19T17:48:10.546030400Z">
+        <DropdownSelection timestamp="2025-06-20T15:00:46.230544600Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\38099\.android\avd\Pixel_9_API_35.avd" />
@@ -29,7 +29,7 @@
       </SelectionState>
       <SelectionState runConfigName="UserLogInActivity">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-06-19T17:48:22.154212200Z">
+        <DropdownSelection timestamp="2025-06-20T15:11:44.136774300Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\38099\.android\avd\Pixel_9_Pro_API_35.avd" />

@@ -30,7 +30,7 @@ fun ServicesScreen(navController: NavHostController) {
                     .fillMaxWidth()
                     .clickable {
                         when (service.name) {
-                            "Appointments" -> navController.navigate("appointment_screen/$userId")
+                            "Appointments" -> navController.navigate("appointments")
                             "Chat with Patients" -> launchZegoChat(context)
                             "New Prescription" -> navController.navigate("prescriptions")
                         }

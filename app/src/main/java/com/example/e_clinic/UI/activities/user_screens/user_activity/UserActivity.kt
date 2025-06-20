@@ -1,6 +1,7 @@
 package com.example.e_clinic.UI.activities.user_screens.user_activity
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import com.example.e_clinic.Services.Service
@@ -35,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -43,8 +45,13 @@ import androidx.navigation.compose.rememberNavController
 import com.example.e_clinic.ZEGOCloud.launchZegoChat
 import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.ServiceListItem
 import com.example.e_clinic.UI.activities.user_screens.UserLogInActivity
+import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.firestore
+import com.google.firebase.messaging.FirebaseMessaging
+
 //import com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.ServiceListItem
 
 
@@ -55,6 +62,30 @@ class UserActivity : ComponentActivity() {
         setContent {
             EClinicTheme {
                 MainScreen()
+            }
+        }
+
+        setupNotifications()
+
+    }
+    private fun setupNotifications() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                101
+            )
+        }
+
+        FirebaseMessaging.getInstance().token.addOnCompleteListener {
+            if (it.isSuccessful) {
+                val token = it.result
+                val userId = Firebase.auth.currentUser?.uid
+                if (userId != null) {
+                    Firebase.firestore.collection("users")
+                        .document(userId)
+                        .update("fcmToken", token)
+                }
             }
         }
     }
@@ -176,33 +207,6 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier = Modifi
 fun PreviewMainScreen() {
     EClinicTheme {
         MainScreen()
-    }
-}
-
-
-
-
-
-
-/*@Composable
-fun AppointmentItem(title: String, description: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(8.dp)) {
-        Icon(imageVector = Icons.Default.AccountBox, contentDescription = "Doctor Icon", modifier = Modifier.padding(end = 16.dp))
-        Column {
-            Text(text = title, style = MaterialTheme.typography.bodyMedium)
-            Text(text = description, style = MaterialTheme.typography.bodySmall)
-        }
-    }
-}*/
-
-@Composable
-fun ServicesSection(services: List<Service>, onServiceClick: (Service) -> Unit) {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text(text = "Services", style = MaterialTheme.typography.headlineMedium)
-        services.forEach { service ->
-            ServiceListItem(service = service, onClick = { onServiceClick(service) })
-            Spacer(modifier = Modifier.height(8.dp))
-        }
     }
 }
 

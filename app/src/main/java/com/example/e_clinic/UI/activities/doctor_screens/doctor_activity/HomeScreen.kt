@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
@@ -28,9 +29,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -75,6 +78,7 @@ fun HomeScreen(){
     val prescribePatientId = remember { mutableStateOf<String?>(null) }
     val prescribeAppointmentId = remember { mutableStateOf<String?>(null) }
     var medicalRecordId = remember { mutableStateOf<String?>(null) }
+    var comments by remember { mutableStateOf("") }
 
     LaunchedEffect(doctorEmail) {
         if (doctorEmail.isNotEmpty()) {
@@ -282,6 +286,74 @@ fun HomeScreen(){
         }
     }
 
+    fun finishAppointmentWithComments(appointment: Appointment, comments: String = "") {
+        // First check if appointment time has passed (with 5 second buffer
+        val currentTime = Timestamp.now()
+        val appointmentTime = appointment.date ?: run {
+            Toast.makeText(context, "Invalid appointment time", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Check if appointment time is in the future (even by 5 seconds)
+        if (appointmentTime.seconds > currentTime.seconds ||
+            (appointmentTime.seconds == currentTime.seconds && appointmentTime.nanoseconds > currentTime.nanoseconds)) {
+            Toast.makeText(
+                context,
+                "Cannot finish future appointments",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        // Only proceed if appointment is in the past
+        val record = MedicalRecord(
+            appointment_id = appointment.id,
+            user_id = appointment.user_id,
+            doctor_id = doctorState.value ?: "",
+            date = appointment.date,
+            prescription_id = "",
+            doctors_notes = comments // Add comments here
+        )
+
+        val db = FirebaseFirestore.getInstance()
+        val recordRef = db.collection("medical_records").document()
+        val appointmentRef = db.collection("appointments").document(appointment.id)
+        medicalRecordId.value = recordRef.id
+
+        db.runTransaction { transaction ->
+            // Verify again in transaction to prevent race conditions
+            val currentAppointment = transaction.get(appointmentRef)
+            val apptTime = currentAppointment.getTimestamp("date")
+
+            if (apptTime != null && (apptTime.seconds > currentTime.seconds ||
+                        (apptTime.seconds == currentTime.seconds && apptTime.nanoseconds > currentTime.nanoseconds))) {
+                throw Exception("Appointment is in the future")
+            }
+
+            transaction.set(recordRef, record)
+            transaction.update(appointmentRef, "status", "FINISHED")
+            null
+        }.addOnSuccessListener {
+            Toast.makeText(context, "Appointment finished", Toast.LENGTH_SHORT).show()
+            doctorState.value?.let { doctorId ->
+                appointmentRepository.getAppointmentsForDoctor(doctorId) { fetchedAppointments ->
+                    appointments.clear()
+                    appointments.addAll(fetchedAppointments)
+                }
+            }
+            currentAppointment.value = null
+        }.addOnFailureListener { e ->
+            val message = when (e.message) {
+                "Appointment is in the future" -> "Cannot finish future appointments"
+                else -> "Transaction failed: ${e.message}"
+            }
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            currentAppointment.value = null
+        }
+    }
+
+
+
     if (selectedAppointment.value != null) {
         AlertDialog(
             onDismissRequest = { selectedAppointment.value = null },
@@ -356,18 +428,34 @@ fun HomeScreen(){
         )
     }
 
+
     if (showPrescriptionChoice.value && currentAppointment.value != null) {
+
+
         AlertDialog(
             onDismissRequest = {
                 showPrescriptionChoice.value = false
                 currentAppointment.value = null
             },
             title = { Text("Finish Appointment") },
-            text = { Text("Would you like to add a prescription now?") },
+            text = {
+                Column {
+                    Text("Would you like to add a prescription now?")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = comments,
+                        onValueChange = { comments = it },
+                        label = { Text("Write comments (optional)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 3
+                    )
+                }
+            },
             confirmButton = {
                 Button(onClick = {
                     val appointment = currentAppointment.value!!
-                    finishAppointment(appointment)
+                    // Update the finishAppointment function to include comments
+                    finishAppointmentWithComments(appointment, comments)
                     showPrescriptionChoice.value = false
                     prescribePatientId.value = appointment.user_id
                     prescribeAppointmentId.value = appointment.id
@@ -378,7 +466,7 @@ fun HomeScreen(){
             },
             dismissButton = {
                 Button(onClick = {
-                    finishAppointment(currentAppointment.value!!)
+                    finishAppointmentWithComments(currentAppointment.value!!, comments)
                     showPrescriptionChoice.value = false
                 }) {
                     Text("No, Finish Without")
@@ -386,7 +474,6 @@ fun HomeScreen(){
             }
         )
     }
-
     if (
         showPrescribeScreen.value &&
         prescribePatientId.value != null &&
@@ -405,6 +492,9 @@ fun HomeScreen(){
         )
     }
 }
+
+
+
 
 // Keep your existing DoctorAppointmentCalendar composable unchanged if its logic is fine
 @Composable

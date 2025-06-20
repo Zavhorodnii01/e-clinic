@@ -4,11 +4,10 @@ const { getFirestore, Timestamp } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const { logger } = require('firebase-functions');
 
-// Initialize Firebase Admin SDK
 initializeApp();
 const db = getFirestore();
 
-// 🔔 Function 1: Send reminders for appointments not finished
+// 🔔 Function 1: Reminder for appointments not finished
 exports.sendAppointmentReminders = onSchedule(
   {
     schedule: 'every 2 minutes',
@@ -69,7 +68,7 @@ exports.sendAppointmentReminders = onSchedule(
   }
 );
 
-// 🔔 Function 2: Notify doctor when a future appointment is canceled
+// 🔔 Function 2: Notify doctor when future appointment is canceled
 exports.notifyDoctorOfCanceledFutureAppointment = onSchedule(
   {
     schedule: 'every 1 minutes',
@@ -145,6 +144,87 @@ exports.notifyDoctorOfCanceledFutureAppointment = onSchedule(
       await Promise.all(promises);
     } catch (error) {
       logger.error('Error in notifyDoctorOfCanceledFutureAppointment:', error);
+    }
+  }
+);
+
+// 🔔 Function 3: Notify patients for appointments today/tomorrow
+exports.sendUserAppointmentReminders = onSchedule(
+  {
+    schedule: 'every 2 minutes',
+    timeZone: 'Europe/Warsaw',
+    maxInstances: 1,
+  },
+  async () => {
+    try {
+      const now = new Date();
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date(now);
+      todayEnd.setHours(23, 59, 59, 999);
+
+      const tomorrowStart = new Date(todayStart);
+      tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+      const tomorrowEnd = new Date(todayEnd);
+      tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
+
+      const todayStartTS = Timestamp.fromDate(todayStart);
+      const todayEndTS = Timestamp.fromDate(todayEnd);
+      const tomorrowStartTS = Timestamp.fromDate(tomorrowStart);
+      const tomorrowEndTS = Timestamp.fromDate(tomorrowEnd);
+
+      const process = async (startTS, endTS, fieldName, label) => {
+        const snapshot = await db.collection('appointments')
+          .where('date', '>=', startTS)
+          .where('date', '<=', endTS)
+          .get();
+
+        const filteredDocs = snapshot.docs.filter(doc => !doc.data().hasOwnProperty(fieldName));
+
+        await Promise.all(filteredDocs.map(async (doc) => {
+          const appointment = doc.data();
+          const userSnap = await db.collection('users').doc(appointment.user_id).get();
+
+          if (!userSnap.exists || !userSnap.data()?.fcmToken) {
+            logger.warn(`User ${appointment.user_id} has no FCM token`);
+            return;
+          }
+
+          const appointmentDate = appointment.date.toDate().toLocaleString('pl-PL', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+
+          const message = {
+            token: userSnap.data().fcmToken,
+            notification: {
+              title: `🩺 Reminder: ${label} Appointment`,
+              body: `Your appointment is scheduled on ${appointmentDate}`,
+            },
+            data: {
+              type: 'user_appointment_reminder',
+              appointmentId: doc.id,
+              appointmentDate,
+              dayType: label,
+            },
+            android: {
+              priority: 'high',
+            },
+          };
+
+          await getMessaging().send(message);
+          await doc.ref.update({ [fieldName]: true });
+          logger.log(`Sent ${label} reminder to user ${appointment.user_id} for appointment ${doc.id}`);
+        }));
+      };
+
+      await process(todayStartTS, todayEndTS, 'reminderTodaySent', 'Today');
+      await process(tomorrowStartTS, tomorrowEndTS, 'reminderTomorrowSent', 'Tomorrow');
+    } catch (error) {
+      logger.error('Error in sendUserAppointmentReminders:', error);
     }
   }
 );

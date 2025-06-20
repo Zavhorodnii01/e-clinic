@@ -211,7 +211,7 @@ fun AppointmentsScreen(doctorId: String) {
 
     // Function to complete the appointment (renamed slightly for clarity)
     // This function performs the actual Firestore transaction to finish the appointment
-    fun performFinishAppointmentTransaction(appointment: Appointment) {
+    fun performFinishAppointmentTransaction(appointment: Appointment, comments: String = "") {
         // First check if appointment time has passed (with 5 second buffer)
         val currentTime = Timestamp.now()
         val appointmentTime = appointment.date ?: run {
@@ -230,57 +230,45 @@ fun AppointmentsScreen(doctorId: String) {
             return
         }
 
-
-        Log.d(TAG, "Attempting to finish appointment: ${appointment.id}")
-        // Create a MedicalRecord object.
-        // Using a new document ID for the record, linking via appointment_id field.
+        // Create a MedicalRecord object with comments
         val record = MedicalRecord(
-            appointment_id = appointment.id, // Link back to the appointment
+            appointment_id = appointment.id,
             user_id = appointment.user_id,
-            doctor_id = doctorState.value ?: doctorId, // Use state if set, else param
-            date = appointment.date ?: Timestamp.now(), // Use appointment date or current
-            prescription_id = "", // Placeholder - will be updated if prescription is added
-            doctors_notes = "" // Placeholder
+            doctor_id = doctorState.value ?: doctorId,
+            date = appointment.date ?: Timestamp.now(),
+            prescription_id = "", // Placeholder
+            doctors_notes = comments // Add comments here
         )
 
-        // Get references for the new medical record and the existing appointment
-        val recordRef = db.collection("medical_records").document() // Generate a new ID for the medical record
+        val recordRef = db.collection("medical_records").document()
         val appointmentRef = db.collection("appointments").document(appointment.id)
+        medicalRecordIdForPrescription = recordRef.id
 
-        // Perform the transaction
         db.runTransaction { transaction ->
-            // 1. Create the Medical Record document
+            val currentAppointment = transaction.get(appointmentRef)
+            val apptTime = currentAppointment.getTimestamp("date")
+
+            if (apptTime != null && (apptTime.seconds > currentTime.seconds ||
+                        (apptTime.seconds == currentTime.seconds && apptTime.nanoseconds > currentTime.nanoseconds))) {
+                throw Exception("Appointment is in the future")
+            }
+
             transaction.set(recordRef, record)
-            Log.d(TAG, "Medical record created with ID: ${recordRef.id}")
-
-            // 2. Update the Appointment status to FINISHED
             transaction.update(appointmentRef, "status", "FINISHED")
-            Log.d(TAG, "Appointment status updated to FINISHED")
-
-            null // Transaction must return null or a result
+            null
         }.addOnSuccessListener {
             Log.d(TAG, "Appointment finish transaction successful.")
-            // Update the state variable with the ID of the new medical record
             medicalRecordIdForPrescription = recordRef.id
             Toast.makeText(context, "Appointment finished.", Toast.LENGTH_SHORT).show()
-
-            // The snapshot listeners will automatically update the lists.
-            // No explicit refresh needed here.
-
-            // appointmentToComplete will be cleared when the choice dialog is dismissed
-            // medicalRecordIdForPrescription is now set for the PrescribeScreen
-            // showPrescribeScreen state is managed by the choice dialog's Yes/No buttons
         }.addOnFailureListener { e ->
             Log.e(TAG, "Appointment finish transaction failed: ${e.message}", e)
             error = "Failed to finish appointment: ${e.localizedMessage}"
-            // Reset state if transaction fails
             appointmentToComplete = null
             showPrescriptionChoiceDialog = false
             showPrescribeScreen = false
             medicalRecordIdForPrescription = null
         }
     }
-
     // Loading upcoming appointments (using SnapshotListener as per original script)
     LaunchedEffect(doctorState.value) {
         val currentDoctorId = doctorState.value ?: doctorId
@@ -309,11 +297,11 @@ fun AppointmentsScreen(doctorId: String) {
                                 Log.e(TAG, "Error parsing upcoming appointment document: ${ex.message}", ex)
                                 null
                             }
-                        }.filter {
+                        }/*.filter {
                             // Optional: filter by date if needed, though status filter usually handles this
                             // Example: Check if date is today or in the future
                             it.date?.toDate()?.after(Date()) ?: true // Assuming future appointments
-                        }
+                        }*/
 
                         upcomingAppointments.clear()
                         upcomingAppointments.addAll(fetchedList)
@@ -476,52 +464,51 @@ fun AppointmentsScreen(doctorId: String) {
         // --- Prescription Choice Dialog ---
         // Show this dialog when an appointment is ready to be completed and the state is set
         if (showPrescriptionChoiceDialog && appointmentToComplete != null) {
+            var comments by remember { mutableStateOf("") }
+
             AlertDialog(
                 onDismissRequest = {
-                    // Dismiss dialog, clear the appointment state
                     showPrescriptionChoiceDialog = false
                     appointmentToComplete = null
-                    // Do NOT reset medicalRecordIdForPrescription or showPrescribeScreen here
-                    // as they might be needed if Yes was clicked and the transaction is pending
                 },
                 title = { Text("Finish Appointment") },
                 text = {
-                    // Show patient name if available
-                    val patientName = patientsCache[appointmentToComplete?.user_id]?.name ?: "this patient"
-                    Text("Would you like to add a prescription now for $patientName?")
+                    Column {
+                        // Show patient name if available
+                        val patientName = patientsCache[appointmentToComplete?.user_id]?.name ?: "this patient"
+                        Text("Would you like to add a prescription now for $patientName?")
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedTextField(
+                            value = comments,
+                            onValueChange = { comments = it },
+                            label = { Text("Write comments (optional)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 3
+                        )
+                    }
                 },
                 confirmButton = {
-                    // "Yes, Add Prescription" Button
                     Button(onClick = {
                         val appt = appointmentToComplete!!
-                        // Trigger the transaction to finish the appointment and create MR
-                        performFinishAppointmentTransaction(appt)
-                        // Hide this dialog
+                        // Update the transaction function to include comments
+                        performFinishAppointmentTransaction(appt, comments)
                         showPrescriptionChoiceDialog = false
-                        // Set state to show the PrescribeScreen *after* the transaction succeeds
-                        // The PrescribeScreen will actually appear when medicalRecordIdForPrescription is set by performFinishAppointmentTransaction
-                        showPrescribeScreen = true // Indicate we want to show it
+                        showPrescribeScreen = true
                     }) {
                         Text("Yes, Add Prescription")
                     }
                 },
                 dismissButton = {
-                    // "No, Finish Without" Button
                     Button(onClick = {
                         val appt = appointmentToComplete!!
-                        // Trigger the transaction to finish the appointment
-                        performFinishAppointmentTransaction(appt)
-                        // Hide this dialog
+                        performFinishAppointmentTransaction(appt, comments)
                         showPrescriptionChoiceDialog = false
-                        // Ensure PrescribeScreen state is false
-                        showPrescribeScreen = false
                     }) {
                         Text("No, Finish Without")
                     }
                 }
             )
-        }
-        // --- End Prescription Choice Dialog ---
+        }        // --- End Prescription Choice Dialog ---
 
 
         // --- Prescribe Screen Integration ---
@@ -847,34 +834,7 @@ fun AppointmentCard(
                         onDismiss = { showingPrescription = null }
                     )
                 }
-                // Optionally show a "View Medical Record" button for FINISHED appointments
-                    // You would implement a navigation action here
-                    /*Button(onClick = {
-                         // Find the MedicalRecord associated with this appointment.id
-                         // Navigate to a screen to display the Medical Record
-                          Log.d(TAG, "View Record clicked for Appt ID: ${appointment.id}")
-                          // Example: navigateToMedicalRecord(appointment.id)
-                     }) {
-                         Text("View Record")
-                     }*/
                 }
             }
         }
     }
-
-
-// IMPORTANT: You need to have a PrescribeScreen composable defined somewhere.
-// Its signature should match the parameters passed from AppointmentsScreen.
-// Example signature:
-/*
-@Composable
-fun PrescribeScreen(
-    medicalRecordId: String, // The ID of the newly created medical record
-    patientId: String, // The ID of the patient
-    appointmentId: String, // The ID of the appointment being completed
-    onDismiss: () -> Unit // Lambda to call when the screen should be closed
-) {
-    // ... Implement your PrescribeScreen UI and logic here ...
-    // Remember to call onDismiss() when the user finishes (e.g., saves prescription) or cancels.
-}
-*/

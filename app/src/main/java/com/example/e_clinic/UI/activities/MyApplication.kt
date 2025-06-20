@@ -20,6 +20,7 @@ class MyApplication : Application() {
         // Initialize ZEGOCLOUD using appId and appSign
         ZIMKit.initWith(this, appId.toLong(), appSign)
         ZIMKit.initNotifications()
+
     }
 
 }

@@ -46,9 +46,6 @@ import com.google.firebase.Timestamp
 
 class DoctorActivity : ComponentActivity() {
     private lateinit var appointmentRepository: AppointmentRepository
-    private val appointments = mutableStateListOf<Appointment>()
-    private val doctorState = mutableStateOf<String?>(null)
-    private val medicalRecordId = mutableStateOf<String?>(null)
     private val urgentAppointmentId = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -349,11 +346,23 @@ fun MainScreen() {
 fun NavigationHost(navController: NavHostController, modifier: Modifier, doctor: Doctor, userId: String) {
     NavHost(navController = navController, startDestination = "home", modifier = modifier) {
         composable("home") { HomeScreen() }
-        composable("appointments") { AppointmentsScreen(userId) }
+
+        // Unified appointments route
+        composable("appointments/{doctorId}") { backStackEntry ->
+            val doctorId = backStackEntry.arguments?.getString("doctorId") ?: userId
+            AppointmentsScreen(doctorId = doctorId)
+        }
+
+        // Fallback route if no ID needed
+        composable("appointments") {
+            AppointmentsScreen(doctorId = userId)
+        }
+
         composable("services") { ServicesScreen(navController) }
         composable("prescriptions") { PrescribeScreen() }
         composable("profile") { ProfileScreen() }
         composable("settings") { SettingsScreen(onClose = {}) }
+
         composable("prescribe/{fromCalendar}/{patientId}") { backStackEntry ->
             val fromCalendar = backStackEntry.arguments?.getString("fromCalendar")?.toBoolean() ?: false
             val patientId = backStackEntry.arguments?.getString("patientId")
@@ -361,7 +370,6 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier, doctor:
         }
     }
 }
-
 
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {

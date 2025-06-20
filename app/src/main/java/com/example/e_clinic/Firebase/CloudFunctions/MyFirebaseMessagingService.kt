@@ -11,6 +11,8 @@ import com.example.e_clinic.R
 import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.DoctorActivity
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.zegocloud.zimkit.services.ZIMKit
+import im.zego.zim.entity.ZIMPushConfig
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
@@ -18,9 +20,41 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         when (remoteMessage.data["type"]) {
             "finish_reminder" -> handleFinishReminder(remoteMessage.data)
             "cancel_notification" -> handleCancelNotification(remoteMessage.data)
+            "user_appointment_reminder" -> handleUserAppointmentReminder(remoteMessage.data)
             else -> createNotification(remoteMessage)
         }
     }
+
+
+
+    private fun handleUserAppointmentReminder(data: Map<String, String>) {
+        val appointmentDate = data["appointmentDate"] ?: "Unknown time"
+        val appointmentId = data["appointmentId"] ?: return
+        val dayType = data["dayType"] ?: "Today"
+
+        val channelId = "appointment_reminders"
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "Appointment Reminders",
+                NotificationManager.IMPORTANCE_HIGH
+            )
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("🩺 Reminder: $dayType Appointment")
+            .setContentText("Your appointment is scheduled on $appointmentDate")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(appointmentId.hashCode(), notification)
+    }
+
 
     private fun handleFinishReminder(data: Map<String, String>) {
         val appointmentId = data["appointmentId"] ?: return
