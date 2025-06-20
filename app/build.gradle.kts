@@ -125,7 +125,7 @@ dependencies {
 
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.security:security-crypto:1.0.0")
-
+    //implementation("androidx.compose.material:material-icons-extended:<version>")
     implementation(libs.firebase.messaging.ktx)
     //implementation("androidx.biometric:biometric-ktx:1.0.1")
 

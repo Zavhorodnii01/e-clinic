@@ -41,6 +41,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Appointment
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.MedicalRecord
 import com.example.e_clinic.Firebase.Repositories.AppointmentRepository
+import com.example.e_clinic.ui.activities.doctor_screens.DoctorProfileScreen
 import com.google.firebase.Timestamp
 
 
@@ -360,7 +361,7 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier, doctor:
 
         composable("services") { ServicesScreen(navController) }
         composable("prescriptions") { PrescribeScreen() }
-        composable("profile") { ProfileScreen() }
+        composable("profile") { DoctorProfileScreen() }
         composable("settings") { SettingsScreen(onClose = {}) }
 
         composable("prescribe/{fromCalendar}/{patientId}") { backStackEntry ->

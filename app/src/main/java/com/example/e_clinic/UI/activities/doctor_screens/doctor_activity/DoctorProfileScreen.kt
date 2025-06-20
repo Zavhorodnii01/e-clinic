@@ -8,12 +8,16 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.e_clinic.Firebase.collections.Doctor
-import com.example.e_clinic.Firebase.repositories.DoctorRepository
-import com.example.e_clinic.ui.activities.user_screens.user_activity.ProfileInfoItem
+import com.example.e_clinic.Firebase.Repositories.DoctorRepository
+import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Doctor
+import com.example.e_clinic.UI.activities.user_screens.user_activity.ProfileInfoItem
+//import com.example.e_clinic.ui.activities.user_screens.user_activity.ProfileInfoItem
 import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.material.icons.filled.Work
+import androidx.compose.material.icons.filled.School
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

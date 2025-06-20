@@ -18,9 +18,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.e_clinic.Firebase.collections.User
-import com.example.e_clinic.Firebase.repositories.UserRepository
-import com.example.e_clinic.ui.activities.user_screens.ChangePinActivity
+import com.example.e_clinic.Firebase.FirestoreDatabase.collections.User
+import com.example.e_clinic.Firebase.Repositories.UserRepository
+import com.example.e_clinic.UI.activities.user_screens.ChangePinActivity
 import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
