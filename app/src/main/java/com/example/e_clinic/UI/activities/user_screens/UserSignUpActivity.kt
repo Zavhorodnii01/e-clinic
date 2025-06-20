@@ -101,8 +101,7 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
                                             phone = "",
                                             dob = "",
                                             gender = "",
-                                            address = "",
-                                            hasSetPin = false
+                                            address = ""
                                         )
                                         userRef.set(newUser).addOnSuccessListener {
                                             onSignUpSuccess()
@@ -169,7 +168,6 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
                         dob = dob,
                         gender = selectedGender,
                         address = address,
-                        hasSetPin = false
                     )
 
                     db.collection("users").document(userId).set(user)

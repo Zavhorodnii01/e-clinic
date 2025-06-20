@@ -1,6 +1,7 @@
 package com.example.e_clinic.Firebase.Repositories
 
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.TimeSlot
+import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
 
 class TimeSlotRepository {
@@ -19,5 +20,8 @@ class TimeSlotRepository {
             .addOnSuccessListener { result ->
                 onSuccess(result.toObjects(TimeSlot::class.java))
             }
+    }
+    fun getCollection(): CollectionReference {
+        return collection
     }
 }

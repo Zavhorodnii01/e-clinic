@@ -4,13 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
-      <SelectionState runConfigName="DoctorLogInActivity">
-        <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-06-20T15:00:46.230544600Z">
+        <DropdownSelection timestamp="2025-06-17T10:47:27.094741Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\38099\.android\avd\Pixel_9_API_35.avd" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=/Users/jakubgruszka/.android/avd/Pixel_8a.avd" />
             </handle>
           </Target>
         </DropdownSelection>
@@ -18,21 +15,35 @@
       </SelectionState>
       <SelectionState runConfigName="DoctorLogInActivity">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-06-20T15:00:46.230544600Z">
-          <Target type="DEFAULT_BOOT">
-            <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\38099\.android\avd\Pixel_9_API_35.avd" />
-            </handle>
-          </Target>
-        </DropdownSelection>
-        <DialogSelection />
-      </SelectionState>
-      <SelectionState runConfigName="UserLogInActivity">
-        <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-06-20T15:11:44.136774300Z">
+        <DropdownSelection timestamp="2025-06-18T16:50:01.744792400Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\38099\.android\avd\Pixel_9_Pro_API_35.avd" />
+            </handle>
+          </Target>
+        </DropdownSelection>
+        <DialogSelection />
+      </SelectionState>
+      <SelectionState runConfigName="DoctorLogInActivity">
+        <option name="selectionMode" value="DROPDOWN" />
+        <DropdownSelection timestamp="2025-06-18T14:44:53.675737Z">
+          <Target type="DEFAULT_BOOT">
+            <handle>
+              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\38099\.android\avd\Pixel_9_API_35.avd" />
+            </handle>
+          </Target>
+        </DropdownSelection>
+        <DialogSelection />
+      </SelectionState>
+      <SelectionState runConfigName="AdminActivity">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="AdminActivity (1)">
+        <option name="selectionMode" value="DROPDOWN" />
+        <DropdownSelection timestamp="2025-06-20T18:16:36.460938Z">
+          <Target type="DEFAULT_BOOT">
+            <handle>
+              <DeviceId pluginId="LocalEmulator" identifier="path=/Users/jakubgruszka/.android/avd/Pixel_8a.avd" />
             </handle>
           </Target>
         </DropdownSelection>

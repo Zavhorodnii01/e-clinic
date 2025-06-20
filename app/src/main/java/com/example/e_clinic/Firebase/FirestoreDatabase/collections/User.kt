@@ -12,7 +12,4 @@ data class User(
     val name: String = "",
     val phone: String = "",
     val surname: String = "",
-    val pinCode: String? = null,
-    val hasSetPin: Boolean = false,
-    val rememberDevice: Boolean = false // Track if device should remember user
 )

@@ -5,6 +5,6 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.example.e_clinic.UI.activities.admin_screens.AdminActivity">
+    tools:context="com.example.e_clinic.UI.activities.admin_screens.admin_activity.AdminActivity">
 
 </androidx.constraintlayout.widget.ConstraintLayout>
