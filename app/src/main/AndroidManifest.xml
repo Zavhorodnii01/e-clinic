@@ -69,6 +69,8 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".UI.activities.admin_screens.SetAdminPinAfterLoginActivity" />
+
         <activity
             android:name=".UI.activities.user_screens.UserSignUpActivity"
             android:exported="true" />

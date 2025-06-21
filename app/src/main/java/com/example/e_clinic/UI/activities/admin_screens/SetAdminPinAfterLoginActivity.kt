@@ -104,7 +104,7 @@ fun SetAdminPinAfterLoginScreen() {
                                 if (confirmPin.length == 4) {
                                     if (pin == confirmPin) {
                                         pinManager.savePin(pin)
-                                        val intent = Intent(context, DoctorPinEntryActivity::class.java)
+                                        val intent = Intent(context, AdminPinEntryActivity::class.java)
                                         context.startActivity(intent)
                                         (context as Activity).finish()
                                     } else {
@@ -133,7 +133,7 @@ fun SetAdminPinAfterLoginScreen() {
                         if (confirmPin.length == 4) {
                             if (pin == confirmPin) {
                                 pinManager.savePin(pin)
-                                val intent = Intent(context, DoctorPinEntryActivity::class.java)
+                                val intent = Intent(context, AdminPinEntryActivity::class.java)
                                 context.startActivity(intent)
                                 (context as Activity).finish()
                             } else {

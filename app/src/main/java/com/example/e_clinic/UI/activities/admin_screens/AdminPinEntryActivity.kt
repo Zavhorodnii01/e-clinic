@@ -66,6 +66,7 @@ fun AdminPinEntryScreen(
 ) {
     val context = LocalContext.current
     val pinManager = PinManager(context)
+    var forgotPassword by remember { mutableStateOf(false) }
 
     var pin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -219,10 +220,17 @@ fun AdminPinEntryScreen(
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .clickable {
-                        onSetupRequired()
+                        forgotPassword = true
                     }
                     .padding(16.dp)
             )
+        }
+    }
+    if (forgotPassword) {
+        LaunchedEffect(Unit) {
+            val pinManager = PinManager(context)
+            pinManager.clearPin() // Clear the current password
+            context.startActivity(Intent(context, AdminLogInActivity::class.java))
         }
     }
 }
