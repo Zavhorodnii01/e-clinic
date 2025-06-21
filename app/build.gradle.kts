@@ -115,6 +115,8 @@ dependencies {
     //implementation (project(":zimkit"))
     //implementation ("com.zegocloud:uikit:2.6.0") // or latest available
 
+    implementation ("com.google.android.material:material:1.9.0")
+
 
 
 }

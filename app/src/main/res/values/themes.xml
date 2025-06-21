@@ -1,10 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <!-- AppCompat theme for your app -->
-    <style name="Theme.Eclinic" parent="Theme.AppCompat.Light.NoActionBar">
-        <!-- Customize your theme with colors or other attributes if needed -->
-
+    <!-- Base theme (Material Components) -->
+    <style name="Theme.EClinic" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Customize colors/attributes as needed -->
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimaryVariant">@color/purple_700</item>
+        <item name="colorOnPrimary">@color/white</item>
     </style>
-
 </resources>

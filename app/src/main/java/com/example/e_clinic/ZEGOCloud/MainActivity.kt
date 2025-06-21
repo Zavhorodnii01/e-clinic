@@ -33,13 +33,15 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
+            // Create a consistent room ID by sorting and combining the IDs
+            val roomID = if (ownID < targetID) "${ownID}_${targetID}" else "${targetID}_${ownID}"
+
             val intent = Intent(this, CallActivity::class.java)
             intent.putExtra("appID", appID)
             intent.putExtra("appSign", appSign)
             intent.putExtra("userID", ownID)
             intent.putExtra("userName", "${ownID}_Name")
-            intent.putExtra("callID", targetID) // the person you're calling
+            intent.putExtra("callID", roomID) // Both users join the same room
             startActivity(intent)
-        }
-    }
+        }    }
 }
