@@ -54,25 +54,7 @@ class CallActivity : AppCompatActivity() {
     }
 
     private fun addCallFragment() {
-        val appID = intent.getLongExtra("appID", 0L)
-        val appSign = intent.getStringExtra("appSign") ?: run {
-            Toast.makeText(this, "Invalid call configuration", Toast.LENGTH_SHORT).show()
-            finish()
-            return
-        }
-        val userID = intent.getStringExtra("userID") ?: run {
-            Toast.makeText(this, "User ID missing", Toast.LENGTH_SHORT).show()
-            finish()
-            return
-        }
-        val userName = intent.getStringExtra("userName") ?: userID
-        val callID = intent.getStringExtra("callID") ?: run {
-            Toast.makeText(this, "Call ID missing", Toast.LENGTH_SHORT).show()
-            finish()
-            return
-        }
-
-        val config = ZegoUIKitPrebuiltCallConfig.oneOnOneVideoCall().apply {
+        val config = ZegoUIKitPrebuiltCallConfig().apply {
             turnOnCameraWhenJoining = true
             turnOnMicrophoneWhenJoining = true
         }
@@ -81,11 +63,11 @@ class CallActivity : AppCompatActivity() {
             .replace(
                 R.id.fragment_container,
                 ZegoUIKitPrebuiltCallFragment.newInstance(
-                    appID,
-                    appSign,
-                    userID,
-                    userName,
-                    callID,
+                    intent.getLongExtra("appID", 0L),
+                    intent.getStringExtra("appSign") ?: "",
+                    intent.getStringExtra("userID") ?: "",
+                    intent.getStringExtra("userName") ?: "",
+                    intent.getStringExtra("callID") ?: "",
                     config
                 )
             )
