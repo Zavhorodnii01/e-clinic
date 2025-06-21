@@ -9,6 +9,9 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
+        maven {
+            url = uri("https://storage.zego.im/maven")
+        }
     }
 }
 
@@ -17,10 +20,14 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://storage.zego.im/maven") }
-        maven { url = uri("https://www.jitpack.io") }
+        maven {
+            url = uri("https://storage.zego.im/maven")
+        }
+        maven {
+            url = uri("https://www.jitpack.io")
+        }
     }
 }
 
 rootProject.name = "e-clinic"
-include(":app")
+include(":app",)

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Chat Fragment Container -->
+    <FrameLayout
+        android:id="@+id/fragment_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/call_button"/>
+
+    <!-- Call Fragment Container (initially hidden) -->
+    <FrameLayout
+        android:id="@+id/call_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"/>
+
+    <!-- Call Button -->
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/call_button"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:layout_margin="16dp"
+        android:background="@drawable/call_button_background"
+        android:src="@drawable/ic_call"
+        android:contentDescription="Call button"
+        app:tint="@android:color/white"/>
+</RelativeLayout>

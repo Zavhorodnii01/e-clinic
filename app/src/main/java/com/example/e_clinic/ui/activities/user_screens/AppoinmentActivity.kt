@@ -127,6 +127,7 @@ fun AppointmentScreen(userId: String, onAppointmentMade: () -> Unit) {
         }
 
         // Submit button
+/*
         Button(
             onClick = {
                 if (selectedDoctor.isNotEmpty() && selectedDate.isNotEmpty() && selectedTime.isNotEmpty()) {
@@ -154,6 +155,7 @@ fun AppointmentScreen(userId: String, onAppointmentMade: () -> Unit) {
         ) {
             Text("Make Appointment")
         }
+*/
 
         // Return button
         Button(

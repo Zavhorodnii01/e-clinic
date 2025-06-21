@@ -104,5 +104,17 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.android.gms:play-services-auth:20.7.0")
 
-    implementation("com.github.ZEGOCLOUD:zego_inapp_chat_uikit_android:+")
+    // ZEGO SDKs - use specific versions
+    implementation ("com.github.ZEGOCLOUD:zego_inapp_chat_uikit_android:+")
+    implementation ("com.github.ZEGOCLOUD:zego_uikit_prebuilt_call_android:+")
+    implementation ("com.github.ZEGOCLOUD:zego_uikit_android:+")
+
+    // Other dependencies
+    //implementation 'com.google.android.gms:play-services-auth:21.0.0'
+    testImplementation ("junit:junit:4.13.2")
+    //implementation (project(":zimkit"))
+    //implementation ("com.zegocloud:uikit:2.6.0") // or latest available
+
+
+
 }
