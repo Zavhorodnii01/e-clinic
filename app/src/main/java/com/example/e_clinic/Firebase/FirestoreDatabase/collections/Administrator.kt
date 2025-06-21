@@ -9,5 +9,6 @@ data class Administrator(
     val email: String = "",
     val name: String = "",
     val phone: String = "",
-    val surname: String = ""
+    val surname: String = "",
+    val profilePicture: String = "",
 )

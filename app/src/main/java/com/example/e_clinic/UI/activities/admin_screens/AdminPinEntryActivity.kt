@@ -1,18 +1,31 @@
-// PinEntryActivity.kt
-package com.example.e_clinic.UI.activities.doctor_screens
+package com.example.e_clinic.UI.activities.admin_screens
 
 import android.content.Context
 import android.content.Intent
-import androidx.biometric.BiometricPrompt
 import android.os.Bundle
 import androidx.activity.compose.setContent
-import androidx.core.content.ContextCompat
+import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,21 +34,23 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.example.e_clinic.Services.PinManager
-import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.DoctorActivity
+import com.example.e_clinic.UI.activities.admin_screens.admin_activity.AdminActivity
 
-class DoctorPinEntryActivity : FragmentActivity() {
+
+class AdminPinEntryActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            DoctorPinEntryScreen(
+            AdminPinEntryScreen(
                 onPinVerified = {
-                    startActivity(Intent(this, DoctorActivity::class.java))
+                    startActivity(Intent(this, AdminActivity::class.java))
                     finish()
                 },
                 onSetupRequired = {
-                    startActivity(Intent(this, SetDoctorPinAfterLoginActivity::class.java))
+                    startActivity(Intent(this, SetAdminPinAfterLoginActivity::class.java))
                     finish()
                 }
             )
@@ -43,8 +58,9 @@ class DoctorPinEntryActivity : FragmentActivity() {
     }
 }
 
+
 @Composable
-fun DoctorPinEntryScreen(
+fun AdminPinEntryScreen(
     onPinVerified: () -> Unit,
     onSetupRequired: () -> Unit
 ) {
@@ -53,17 +69,17 @@ fun DoctorPinEntryScreen(
 
     var pin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
-   //var biometricFailures by remember { mutableStateOf(0) }
+    //var biometricFailures by remember { mutableStateOf(0) }
     var showPinScreen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         showBiometricPrompt(context){
-            success, canceled ->
+                success, canceled ->
             if (success) {
                 onPinVerified()
             }
             else {
-              showPinScreen = true
+                showPinScreen = true
             }
         }
     }
@@ -130,7 +146,7 @@ fun DoctorPinEntryScreen(
                     ) {
                         for (col in 1..3) {
                             val number = (row * 3 + col).toString()
-                            DoctorNumberButtonSet(number) {
+                            AdminNumberButtonSet(number) {
                                 if (pin.length < 4) {
                                     pin += number
                                     error = null
@@ -154,7 +170,7 @@ fun DoctorPinEntryScreen(
                 ) {
                     Spacer(modifier = Modifier.size(64.dp))
 
-                    DoctorNumberButtonSet("0") {
+                    AdminNumberButtonSet("0") {
                         if (pin.length < 4) {
                             pin += "0"
                             error = null
@@ -247,7 +263,7 @@ fun showBiometricPrompt(
 
             override fun onAuthenticationFailed() {
                 super.onAuthenticationFailed()
-                 onAuthenticationResult(false, true) // Show PIN entry screen
+                onAuthenticationResult(false, true) // Show PIN entry screen
 
             }
 

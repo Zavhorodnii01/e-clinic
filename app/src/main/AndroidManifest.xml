@@ -39,6 +39,11 @@
             android:name=".ZEGOCloud.ConversationActivity"
             android:exported="true" />
         <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
+
+        <activity
             android:name=".ZEGOCloud.MainActivity"
             android:exported="true" />
         <activity
@@ -51,15 +56,17 @@
             android:name="com.example.e_clinic.UI.activities.user_screens.PinEntryActivity"
             android:exported="true" />
 
+        <activity android:name=".UI.activities.admin_screens.AdminPinEntryActivity" />
+
         <activity
             android:name=".UI.activities.user_screens.UserLogInActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Eclinic">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.MAIN" />-->
+<!--                <category android:name="android.intent.category.LAUNCHER" />-->
+<!--            </intent-filter>-->
         </activity>
 
         <activity
@@ -71,17 +78,20 @@
         <activity
             android:name=".UI.activities.doctor_screens.doctor_activity.DoctorActivity"
             android:exported="true" />
-        <activity
-            android:name=".UI.activities.admin_screens.AdminLogInActivity"
-            android:exported="true" />
+        <activity android:name=".UI.activities.admin_screens.AdminLogInActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".UI.activities.user_screens.user_activity.UserActivity"
             android:exported="true" />
         <activity
             android:name=".UI.activities.doctor_screens.DoctorLogInActivity"
             android:exported="true" />
-        <activity
-            android:name=".UI.activities.doctor_screens.PrescribeScreen" />
+
         <activity
             android:name=".UI.activities.user_screens.PrescriptionListActivity" />
         <activity

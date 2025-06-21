@@ -33,7 +33,6 @@ fun ProfileScreen() {
     LaunchedEffect(userId) {
         UserRepository().getUserById(userId) { loadedUser ->
             user = loadedUser
-            visitsCount = 4 // Placeholder
         }
     }
 
@@ -49,7 +48,7 @@ fun ProfileScreen() {
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            ProfileHeader(user?.name, user?.surname, visitsCount)
+            ProfileHeader(user?.name, user?.surname)
             Spacer(modifier = Modifier.height(24.dp))
             ProfileInfoSection(user)
             Spacer(modifier = Modifier.height(24.dp))
@@ -59,7 +58,7 @@ fun ProfileScreen() {
 }
 
 @Composable
-fun ProfileHeader(name: String?, surname: String?, visits: Int) {
+fun ProfileHeader(name: String?, surname: String?) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         Icon(
             imageVector = Icons.Filled.AccountCircle,
@@ -70,11 +69,6 @@ fun ProfileHeader(name: String?, surname: String?, visits: Int) {
         Spacer(modifier = Modifier.height(16.dp))
         Text(text = "${name ?: "Loading..."} ${surname ?: ""}", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "$visits visits this month",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.primary
-        )
     }
 }
 

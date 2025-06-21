@@ -131,6 +131,7 @@ dependencies {
 
     // Testy
     testImplementation(libs.junit)
+    implementation("com.github.yalantis:ucrop:2.2.8")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
