@@ -34,6 +34,7 @@ import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
 import com.google.firebase.messaging.FirebaseMessaging
 import android.app.AlertDialog
+import android.app.Application
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
@@ -51,6 +52,9 @@ import com.example.e_clinic.Firebase.FirestoreDatabase.collections.MedicalRecord
 import com.example.e_clinic.Firebase.Repositories.AppointmentRepository
 import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.DoctorProfileScreen
 import com.google.firebase.Timestamp
+import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallService
+import com.zegocloud.uikit.prebuilt.call.invite.ZegoUIKitPrebuiltCallInvitationConfig
+import com.zegocloud.uikit.prebuilt.call.invite.internal.ZegoTranslationText
 
 
 class DoctorActivity : ComponentActivity() {
@@ -107,6 +111,18 @@ class DoctorActivity : ComponentActivity() {
     }
 }
 
+private fun createCallConfig(): ZegoUIKitPrebuiltCallInvitationConfig {
+    return ZegoUIKitPrebuiltCallInvitationConfig().apply {
+        //notifyWhenAppRunningInBackgroundOrQuit = true
+        translationText = ZegoTranslationText().apply {
+            //callInvitationDialogTitle = "Incoming Call"
+            //callInvitationDialogMessage = "is calling you"
+            incomingCallPageAcceptButton = "Accept"
+            incomingCallPageDeclineButton = "Decline"
+        }
+    }}
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
@@ -144,6 +160,7 @@ fun MainScreen() {
 
     // Fetch doctor name and state
     val user = FirebaseAuth.getInstance().currentUser
+    val userID = FirebaseAuth.getInstance().currentUser?.uid ?: ""
     LaunchedEffect(user) {
         user?.email?.let { email ->
             FirebaseFirestore.getInstance()
@@ -161,6 +178,17 @@ fun MainScreen() {
                 }
         }
     }
+
+    val application = context.applicationContext as Application
+
+    ZegoUIKitPrebuiltCallService.init(
+        application,
+        951562290L,
+        "f94c807ab100d261b21dd7dfb8e7fef479ff64946fd73e07001c373080bc8986",
+        userID,  // Actual user ID
+        doctorName, // Actual user name
+        createCallConfig() // Same config as before
+    )
 
     fun finishAppointment(appointment: Appointment) {
         val currentTime = Timestamp.now()

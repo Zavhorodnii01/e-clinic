@@ -26,3 +26,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "e-clinic"
 include(":app")
+include(":zimkit")

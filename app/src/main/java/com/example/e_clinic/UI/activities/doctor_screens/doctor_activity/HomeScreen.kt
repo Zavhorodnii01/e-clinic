@@ -2,6 +2,7 @@ package com.example.e_clinic.UI.activities.doctor_screens.doctor_activity
 
 import android.util.Log
 import android.widget.Toast // Add this import
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +29,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,8 +58,9 @@ import com.zegocloud.zimkit.services.ZIMKit
 import java.time.LocalDate
 import java.time.ZoneId
 import java.text.SimpleDateFormat // Make sure you import SimpleDateFormat
+import java.time.format.DateTimeFormatter
 import java.util.Locale
-
+import androidx.compose.foundation.lazy.items
 // Assuming PrescribeScreen is defined elsewhere and imported correctly
 // import com.example.e_clinic.ui.activities.doctor_screens.PrescribeScreen // Example Import
 
@@ -513,88 +516,84 @@ fun HomeScreen(){
 @Composable
 fun DoctorAppointmentCalendar(
     appointments: List<Appointment>,
-    onAppointmentClick : (Appointment) -> Unit
-){
-    // ... (Your existing DoctorAppointmentCalendar code) ...
+    onAppointmentClick: (Appointment) -> Unit
+) {
     val today = remember { mutableStateOf(LocalDate.now()) }
-    // Filter for today's appointments, exclude FINISHED status from the *calendar* view
+
     val dayAppointments = appointments.filter { appointment ->
-        (appointment.status == "NOT_FINISHED" || appointment.status == "FINISHED") && // Keep FINISHED status in list but maybe not clickable? Or filter later?
+        (appointment.status == "NOT_FINISHED" || appointment.status == "FINISHED") &&
                 appointment.date?.toDate()?.toInstant()
                     ?.atZone(ZoneId.systemDefault())
                     ?.toLocalDate() == today.value
-    }.sortedBy { it.date?.toDate() } // Sort by time
+    }.sortedBy { it.date?.toDate() }
 
-    // Re-filter dayAppointments for display in calendar slots to only show NOT_FINISHED
-    val displayDayAppointments = dayAppointments.filter { it.status == "NOT_FINISHED" } // Only show NOT_FINISHED in time slots
+    val displayDayAppointments = dayAppointments.filter { it.status == "NOT_FINISHED" }
 
     val colorScheme = MaterialTheme.colorScheme
-    val userRepository = UserRepository() // Unused?
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
-            .background(colorScheme.surface, shape = RoundedCornerShape(8.dp))
+            .background(colorScheme.surface, RoundedCornerShape(12.dp))
             .padding(16.dp)
-    ){
+    ) {
+        // Header with date navigation
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { today.value = today.value.minusDays(1) }) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Previous Day",  tint = colorScheme.onSurface)
+                Icon(Icons.Default.ArrowBack, contentDescription = "Previous Day", tint = colorScheme.onSurface)
             }
             Text(
-                text = today.value.toString(),
-                style = MaterialTheme.typography.headlineMedium,
-                color = colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 16.dp)
+                text = today.value.format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
+                style = MaterialTheme.typography.titleLarge,
+                color = colorScheme.onSurface
             )
             IconButton(onClick = { today.value = today.value.plusDays(1) }) {
-                Icon(Icons.Default.ArrowForward, contentDescription = "Next Day",  tint = colorScheme.onSurface)
+                Icon(Icons.Default.ArrowForward, contentDescription = "Next Day", tint = colorScheme.onSurface)
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // List of time slots
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            items(24) { hour ->
-                // Find appointment for this hour among the *displayable* appointments (NOT_FINISHED)
+        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+            items((8..20).toList()) { hour ->
                 val appointmentAtHour = displayDayAppointments.find { appointment ->
                     appointment.date?.toDate()?.toInstant()
                         ?.atZone(ZoneId.systemDefault())
                         ?.hour == hour
                 }
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp),
+                        .padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = "%02d:00".format(hour),
-                        modifier = Modifier.width(60.dp),
+                        modifier = Modifier.width(70.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = colorScheme.onSurface
                     )
+
                     if (appointmentAtHour != null) {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(start = 8.dp)
                                 .clickable { onAppointmentClick(appointmentAtHour) },
-                            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant)// Clickable card
+                            shape = RoundedCornerShape(8.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant)
                         ) {
-                            Column(modifier = Modifier.padding(8.dp)) {
-                                // --- Patient Name Loading ---
+                            Column(modifier = Modifier.padding(12.dp)) {
                                 val patientName = remember(appointmentAtHour.user_id) { mutableStateOf("Loading...") }
                                 LaunchedEffect(appointmentAtHour.user_id) {
-                                    FirebaseFirestore.getInstance() // Use instance directly or inject
+                                    FirebaseFirestore.getInstance()
                                         .collection("users")
                                         .document(appointmentAtHour.user_id)
                                         .get()
@@ -607,7 +606,7 @@ fun DoctorAppointmentCalendar(
                                             patientName.value = "Unknown"
                                         }
                                 }
-                                // --- End Patient Name Loading ---
+
                                 Text(
                                     text = "Patient: ${patientName.value}",
                                     style = MaterialTheme.typography.bodyMedium,
@@ -616,7 +615,7 @@ fun DoctorAppointmentCalendar(
                                 Text(
                                     text = "Time: ${
                                         appointmentAtHour.date?.toDate()?.let {
-                                            SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(it) // Format only time
+                                            SimpleDateFormat("HH:mm", Locale.getDefault()).format(it)
                                         } ?: "N/A"
                                     }",
                                     style = MaterialTheme.typography.bodySmall,
@@ -625,15 +624,25 @@ fun DoctorAppointmentCalendar(
                             }
                         }
                     } else {
-                        // Display an empty slot or text if no appointment
-                        Text(
-                            text = "Available", // Or just Spacer
+                        OutlinedCard(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(start = 8.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colorScheme.outline
-                        )
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, colorScheme.outlineVariant),
+                            colors = CardDefaults.outlinedCardColors(containerColor = Color.Transparent)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(12.dp)
+                            ) {
+                                Text(
+                                    text = "No Appointment scheduled",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = colorScheme.outline
+                                )
+                            }
+                        }
                     }
                 }
             }

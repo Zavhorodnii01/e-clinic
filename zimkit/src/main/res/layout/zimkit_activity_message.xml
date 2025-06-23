@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+  <androidx.constraintlayout.widget.ConstraintLayout
+      android:layout_width="match_parent"
+      android:layout_height="match_parent"
+      tools:context=".ZIMKitMessageActivity">
+
+    <!-- Title bar -->
+    <com.zegocloud.zimkit.common.components.widget.TitleBar
+        android:id="@+id/title_bar"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/title_bar_height"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Call buttons OVERLAYED on top-right of title bar -->
+    <LinearLayout
+        android:id="@+id/call_buttons_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/title_bar">
+
+      <com.zegocloud.uikit.prebuilt.call.invite.widget.ZegoSendCallInvitationButton
+          android:id="@+id/voice_call_btn"
+          android:layout_width="36dp"
+          android:layout_height="36dp"
+          android:layout_marginEnd="2dp"
+          android:background="?attr/selectableItemBackgroundBorderless"
+          android:contentDescription="Voice call button"
+          app:icon="@drawable/ic_voice_call" />
+
+      <com.zegocloud.uikit.prebuilt.call.invite.widget.ZegoSendCallInvitationButton
+          android:id="@+id/video_call_btn"
+          android:layout_width="36dp"
+          android:layout_height="36dp"
+          android:layout_marginEnd="25dp"
+          android:background="?attr/selectableItemBackgroundBorderless"
+          android:contentDescription="Video call button"
+          app:icon="@drawable/ic_video_call" />
+    </LinearLayout>
+
+    <!-- Message content -->
+    <FrameLayout
+        android:id="@+id/fra_message"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/title_bar"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+  </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>

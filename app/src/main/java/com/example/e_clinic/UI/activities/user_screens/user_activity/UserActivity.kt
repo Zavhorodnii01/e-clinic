@@ -1,5 +1,6 @@
 package com.example.e_clinic.UI.activities.user_screens.user_activity
 
+import android.app.Application
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -72,6 +73,9 @@ import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
 import com.google.firebase.messaging.FirebaseMessaging
+import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallService
+import com.zegocloud.uikit.prebuilt.call.invite.ZegoUIKitPrebuiltCallInvitationConfig
+import com.zegocloud.uikit.prebuilt.call.invite.internal.ZegoTranslationText
 import kotlin.text.get
 
 //import com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.ServiceListItem
@@ -135,16 +139,30 @@ class UserActivity : ComponentActivity() {
 }
 
 
+private fun createCallConfig(): ZegoUIKitPrebuiltCallInvitationConfig {
+    return ZegoUIKitPrebuiltCallInvitationConfig().apply {
+        //notifyWhenAppRunningInBackgroundOrQuit = true
+        translationText = ZegoTranslationText().apply {
+            //callInvitationDialogTitle = "Incoming Call"
+            //callInvitationDialogMessage = "is calling you"
+            incomingCallPageAcceptButton = "Accept"
+            incomingCallPageDeclineButton = "Decline"
+        }
+    }}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
     var userName by remember { mutableStateOf("") }
     var profilePictureUrl by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
 
+    var userID : String = ""
     val user = FirebaseAuth.getInstance().currentUser
     user?.let {
         val userId = it.uid
+        userID = userId
         val db = FirebaseFirestore.getInstance()
         db.collection("users").document(userId).get()
             .addOnSuccessListener { document ->
@@ -202,6 +220,17 @@ fun MainScreen() {
     ) { innerPadding ->
         NavigationHost(navController = navController, modifier = Modifier.padding(innerPadding))
     }
+
+    val application = context.applicationContext as Application
+
+    ZegoUIKitPrebuiltCallService.init(
+        application,
+        951562290L,
+        "f94c807ab100d261b21dd7dfb8e7fef479ff64946fd73e07001c373080bc8986",
+        userID,  // Actual user ID
+        userName, // Actual user name
+        createCallConfig() // Same config as before
+    )
 
 }
 
