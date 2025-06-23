@@ -3,48 +3,55 @@ package com.example.e_clinic.UI.activities.user_screens.user_activity
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Prescription
 import com.google.firebase.auth.FirebaseAuth
 import coil.compose.rememberAsyncImagePainter
+import kotlin.toString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DocumentScreenForm(userId: String) {
-    var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Prescriptions")
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Documents") }
-            )
-        }
+        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f)
     ) { paddingValues ->
-        Column(modifier = Modifier.padding(paddingValues)) {
-            TabRow(selectedTabIndex = selectedTab) {
-                tabs.forEachIndexed { index, tab ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        text = { Text(tab) }
-                    )
-                }
-            }
+        Box(
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.85f))
 
-            when (selectedTab) {
-                0 -> PrescriptionTab(userId)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = "My Prescriptions",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+                )
+                PrescriptionTab(userId)
             }
         }
     }
@@ -73,7 +80,12 @@ fun PrescriptionTab(userId: String) {
             }
     }
 
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         items(prescriptions, key = { it.id }) { prescription ->
             PrescriptionItem(prescription)
         }
@@ -105,43 +117,50 @@ fun PrescriptionItem(prescription: Prescription) {
     }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .clickable { /* Handle click to show details */ },
-        elevation = CardDefaults.cardElevation(4.dp)
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Doctor: ${doctorName.value}", style = MaterialTheme.typography.bodyMedium)
-            Text("Date of Issue: ${prescription.issued_date?.toDate()}", style = MaterialTheme.typography.bodySmall)
-            Button(
-                onClick = {
-                    val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(prescription.link_to_storage)
-                    storageRef.downloadUrl.addOnSuccessListener { uri ->
-                        imageUrl = uri.toString()
-                        showDialog = true
-                    }
-                },
-                modifier = Modifier.padding(top = 8.dp)
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text("Doctor: ${doctorName.value}", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Date of Issue: ${prescription.issued_date?.toDate()}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("View Prescription")
-            }
-            Button(
-                onClick = {
-                    val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(prescription.link_to_storage)
-                    storageRef.downloadUrl.addOnSuccessListener { uri ->
-                        imageUrl = uri.toString()
-                        showQRCodeDialog = true
+                Button(
+                    onClick = {
+                        val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(prescription.link_to_storage)
+                        storageRef.downloadUrl.addOnSuccessListener { uri ->
+                            imageUrl = uri.toString()
+                            showDialog = true
+                        }
                     }
-                },
-                modifier = Modifier.padding(top = 8.dp)
-            ) {
-                Text("Show QR Code")
+                ) {
+                    Text("View Prescription")
+                }
+                Button(
+                    onClick = {
+                        val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(prescription.link_to_storage)
+                        storageRef.downloadUrl.addOnSuccessListener { uri ->
+                            imageUrl = uri.toString()
+                            showQRCodeDialog = true
+                        }
+                    }
+                ) {
+                    Text("Show QR Code")
+                }
             }
         }
     }
     if (showDialog) {
-        showImageDialog(imageUrl)
+        FullScreenImageDialog(imageUrl) { showDialog = false }
     }
     if (showQRCodeDialog) {
         showQRCodeDialog(imageUrl){
@@ -227,5 +246,22 @@ fun generateQRCode(link: String): Bitmap? {
     } catch (e: Exception) {
         e.printStackTrace()
         null
+    }
+}
+
+@Composable
+fun FullScreenImageDialog(imageUrl: String, onDismiss: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = rememberAsyncImagePainter(imageUrl),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }

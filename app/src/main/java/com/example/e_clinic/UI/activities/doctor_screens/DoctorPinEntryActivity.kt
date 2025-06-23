@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
 import com.example.e_clinic.Services.PinManager
+import com.example.e_clinic.UI.activities.admin_screens.AdminLogInActivity
 import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.DoctorActivity
 
 class DoctorPinEntryActivity : FragmentActivity() {
@@ -55,6 +56,7 @@ fun DoctorPinEntryScreen(
     var error by remember { mutableStateOf<String?>(null) }
    //var biometricFailures by remember { mutableStateOf(0) }
     var showPinScreen by remember { mutableStateOf(false) }
+    var forgotPassword by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         showBiometricPrompt(context){
@@ -203,10 +205,17 @@ fun DoctorPinEntryScreen(
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .clickable {
-                        onSetupRequired()
+                        forgotPassword = true
                     }
                     .padding(16.dp)
             )
+        }
+    }
+    if (forgotPassword) {
+        LaunchedEffect(Unit) {
+            val pinManager = PinManager(context)
+            pinManager.clearPin() // Clear the current password
+            context.startActivity(Intent(context, DoctorLogInActivity::class.java))
         }
     }
 }

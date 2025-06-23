@@ -8,23 +8,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.User
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
@@ -50,7 +56,8 @@ fun UsersScreen() {
                     phone = document.getString("phone") ?: "Unknown",
                     email = document.getString("email") ?: "Unknown",
                     gender = document.getString("gender") ?: "Unknown",
-                    address = document.getString("address") ?: "Unknown")
+                    address = document.getString("address") ?: "Unknown",
+                    profilePicture = document.getString("profilePicture") ?: "",)
                 users.add(user)
             }
 
@@ -94,12 +101,37 @@ fun UsersScreen() {
                     contentAlignment = Alignment.Center
                 ) {
                     if (rotation <= 90f){
-                        Text(
-                            text = "${user.name} ${user.surname}(${user.gender})\nEmail: ${user.email}\nAddress: ${user.address} \n",
-                            fontSize = 16.sp,
-                            textAlign = TextAlign.Start,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (!user.profilePicture.isNullOrEmpty()) {
+                                AsyncImage(
+                                    model = user.profilePicture,
+                                    contentDescription = "User Avatar",
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .clip(CircleShape)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "User",
+                                    modifier = Modifier.size(56.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = "${user.name} ${user.surname} (${user.gender})",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(text = "Email: ${user.email}")
+                                Text(text = "Address: ${user.address}")
+                                Text(text = "Phone: ${user.phone}")
+                            }
+                        }
                     }
                     else {
                         Column(

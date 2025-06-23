@@ -77,6 +77,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.ui)
 
     // Navigation
     implementation(libs.androidx.navigation.runtime.android)
@@ -89,7 +90,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
 
     // Firebase
-    implementation(platform("com.google.firebase:firebase-bom:33.11.0")) // najnowsza na 2025
+    implementation(platform("com.google.firebase:firebase-bom:33.15.0")) // najnowsza na 2025
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-storage-ktx")

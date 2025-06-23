@@ -8,5 +8,6 @@ data class Appointment(
     val date: Timestamp? = null ,
     val doctor_id: String = "",
     val user_id: String = "",
-    val status: String = ""
+    val status: String = "",
+    val type: String = "",
 )

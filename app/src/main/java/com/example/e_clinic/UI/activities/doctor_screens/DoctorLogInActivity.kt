@@ -1,44 +1,14 @@
 package com.example.e_clinic.UI.activities.doctor_screens
 
+
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,220 +16,247 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.e_clinic.Services.PinManager
-//import com.example.e_clinic.ui.activities.doctor_screens.DoctorLogInActivity
 import com.example.e_clinic.UI.theme.EClinicTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.delay
 
 class DoctorLogInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        val pinManager = PinManager(this)
-        val auth = FirebaseAuth.getInstance()
-        val currentUser = auth.currentUser
         super.onCreate(savedInstanceState)
-        if (pinManager.getPin() != null && currentUser != null) {
-            val intent = (Intent(this, DoctorPinEntryActivity::class.java))
-            startActivity(intent)
-            finish()
-        }
-        enableEdgeToEdge()
         setContent {
             EClinicTheme {
-                /*Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    *//*Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )*//*
-                }*/
-                LogInScreen(
-                    /*onSignUpClick = {
-                        val intent = Intent(this, UserSignUpActivity::class.java)
-                        startActivity(intent)
-                    },*/
-                    onSignInSuccess = {
-                        startActivity(Intent(this, DoctorPinEntryActivity::class.java))
-                        finish()
-                    }
-                )
-
+                DoctorLoginScreen()
             }
         }
     }
 }
 
-
-
 @Composable
-fun LogInScreen(
-    //onSignUpClick: () -> Unit,
-    onSignInSuccess: () -> Unit
-) {
-    val context = LocalContext.current
+fun DoctorLoginScreen() {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var successMessage by remember { mutableStateOf<String?>(null) }
-    var logInStatus by remember { mutableStateOf("") }
-    val pinManager = PinManager(context)
+    var showResetPassword by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+    val pinManager = remember { PinManager(context) }
+    val currentUser = auth.currentUser
+    var showPinEntry by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Welcome to eClinic",
-            fontSize = MaterialTheme.typography.headlineSmall.fontSize,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(12.dp)
-        )
-
-        TextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
-        )
-
-        TextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = {
-                FirebaseAuth.getInstance().signInWithEmailAndPassword(email, password)
-                    .addOnCompleteListener { task ->
-                        if (task.isSuccessful) {
-                            val userId = FirebaseAuth.getInstance().currentUser?.uid
-                            if (userId != null) {
-                                FirebaseFirestore.getInstance().collection("users")
-                                    .document(userId)
-                                    .get()
-                                    .addOnSuccessListener { document ->
-                                        val isAdmin = document.getBoolean("admin") ?: false
-                                        if (!isAdmin) {
-                                            logInStatus = ""
-                                            val intent = if (pinManager.getPin() != null) {
-                                                Intent(context, DoctorPinEntryActivity::class.java)
-                                            } else {
-                                                Intent(context, SetDoctorPinAfterLoginActivity::class.java)
-                                            }
-                                            context.startActivity(intent)
-                                        } else {
-                                            FirebaseAuth.getInstance().signOut()
-                                            errorMessage = "You are not authorized as a user."
-                                        }
-                                    }
-                                    .addOnFailureListener { exception ->
-                                        errorMessage = "Error fetching user data: ${exception.message}"
-                                    }
-                            } else {
-                                errorMessage = "User not found."
-                            }
-                        } else {
-                            // errorMessage = task.exception?.message ?: "Authentication failed"
-                            errorMessage = "Incorrect password or email"
-                        }
-                    }
-
-            },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text("Sign In", fontSize = 16.sp, fontWeight = FontWeight.Medium)
-        }
-
-
-        Spacer(modifier = Modifier.padding(8.dp))
-
-        Button(
-            onClick = {
-                if (email.isNotBlank()) {
-                    FirebaseAuth.getInstance().sendPasswordResetEmail(email)
-                        .addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                successMessage = "Password reset email sent to $email"
-                            } else {
-                                errorMessage = task.exception?.message
-                            }
-                        }
-                } else {
-                    errorMessage = "Please enter your email address to reset your password"
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text("Forgot Password", fontSize = 16.sp, fontWeight = FontWeight.Medium)
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        LaunchedEffect(errorMessage, successMessage) {
-            if (errorMessage != null || successMessage != null) {
-                delay(7000) // Keep message visible for 7 seconds
-                errorMessage = null
-                successMessage = null
-            }
-        }
-
-        AnimatedVisibility(
-            visible = errorMessage != null || successMessage != null,
-            enter = fadeIn(animationSpec = tween(500)) + slideInVertically(initialOffsetY = { it / 2 }),
-            exit = fadeOut(animationSpec = tween(500)) + slideOutVertically(targetOffsetY = { it / 2 })
+    if (currentUser != null && pinManager.getPin() != null && !showPinEntry) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
             Card(
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.large,
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (errorMessage != null) Color(0xFFFFE0E0) else Color(0xFFE0FFE0),
-                    contentColor = Color.Black
-                )
+                    .widthIn(min = 320.dp, max = 400.dp)
+                    .padding(16.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.padding(32.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        imageVector = if (errorMessage != null) Icons.Filled.Close else Icons.Filled.CheckCircle,
-                        contentDescription = "Status Icon",
-                        tint = if (errorMessage != null) Color.Red else Color.Green,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = errorMessage ?: successMessage ?: "",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Start,
-                        modifier = Modifier.weight(1f) // Allow text to expand dynamically
+                        text = "eClinic Doctor",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
+                    Text(
+                        text = "Welcome Back",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 24.dp)
+                    )
+                    Button(
+                        onClick = { showPinEntry = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Text("Sign In")
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            auth.signOut()
+                            context.startActivity(Intent(context, DoctorLogInActivity::class.java))
+                            (context as? ComponentActivity)?.finish()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                    ) {
+                        Text("Sign Out", color = Color.White)
+                    }
+                }
+            }
+        }
+        if (errorMessage != null) {
+            AlertDialog(
+                onDismissRequest = { errorMessage = null },
+                title = { Text("Error") },
+                text = { Text(errorMessage ?: "") },
+                confirmButton = {
+                    TextButton(onClick = { errorMessage = null }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+        return
+    } else {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    shape = MaterialTheme.shapes.large,
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                    modifier = Modifier
+                        .widthIn(min = 320.dp, max = 400.dp)
+                        .padding(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(32.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Log in to eClinic Doctor",
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                            modifier = Modifier.padding(bottom = 24.dp)
+                        )
+
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it },
+                            label = { Text("Email") },
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = { password = it },
+                            label = { Text("Password") },
+                            modifier = Modifier.fillMaxWidth(),
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                        )
+
+                        if (errorMessage != null) {
+                            AlertDialog(
+                                onDismissRequest = { errorMessage = null },
+                                title = { Text("Error") },
+                                text = { Text(errorMessage ?: "") },
+                                confirmButton = {
+                                    TextButton(onClick = { errorMessage = null }) {
+                                        Text("OK")
+                                    }
+                                }
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Button(
+                            onClick = {
+                                if (email.isEmpty() || password.isEmpty()) {
+                                    errorMessage = "Please fill all fields"
+                                    return@Button
+                                }
+                                isLoading = true
+                                errorMessage = null
+
+                                auth.signInWithEmailAndPassword(email, password)
+                                    .addOnCompleteListener { task ->
+                                        isLoading = false
+                                        if (task.isSuccessful) {
+                                            val user = auth.currentUser
+                                            val uid = user?.uid ?: run {
+                                                errorMessage = "Authentication error: Missing UID"
+                                                return@addOnCompleteListener
+                                            }
+                                            db.collection("users").document(uid).get()
+                                                .addOnSuccessListener { document ->
+                                                    val isAdmin = document.getBoolean("admin") ?: false
+                                                    if (!isAdmin) {
+                                                        val intent = if (pinManager.getPin() != null) {
+                                                            Intent(context, DoctorPinEntryActivity::class.java)
+                                                        } else {
+                                                            Intent(context, SetDoctorPinAfterLoginActivity::class.java)
+                                                        }
+                                                        context.startActivity(intent)
+                                                        (context as? ComponentActivity)?.finish()
+                                                    } else {
+                                                        errorMessage = "You are not authorized as a doctor."
+                                                        auth.signOut()
+                                                    }
+                                                }
+                                                .addOnFailureListener { e ->
+                                                    errorMessage = "Database error: ${e.message}"
+                                                    auth.signOut()
+                                                }
+                                        } else {
+                                            errorMessage = "Login failed: ${task.exception?.message ?: "Unknown error"}"
+                                        }
+                                    }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            enabled = !isLoading
+                        ) {
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White
+                                )
+                            } else {
+                                Text("Login")
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        TextButton(
+                            onClick = { showResetPassword = true },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text("Forgot password?")
+                        }
+                    }
                 }
             }
         }
     }
-
-    Spacer(modifier = Modifier.height(16.dp))
-
+    if (showResetPassword) {
+        ResetPasswordScreen(
+            onDismiss = { showResetPassword = false }
+        )
+    }
+    if (showPinEntry) {
+        val intent = Intent(context, DoctorPinEntryActivity::class.java)
+        context.startActivity(intent)
+        (context as? ComponentActivity)?.finish()
+        return
+    }
 }

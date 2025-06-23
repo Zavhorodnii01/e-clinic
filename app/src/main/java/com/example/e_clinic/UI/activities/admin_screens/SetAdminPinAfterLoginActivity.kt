@@ -32,7 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_clinic.Services.PinManager
-import com.example.e_clinic.UI.activities.doctor_screens.DoctorPinEntryActivity
+
 
 
 class SetAdminPinAfterLoginActivity : ComponentActivity() {

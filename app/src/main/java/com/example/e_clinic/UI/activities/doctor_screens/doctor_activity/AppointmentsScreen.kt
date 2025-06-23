@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
@@ -14,9 +15,12 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Appointment
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.MedicalRecord
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Prescription
@@ -386,13 +390,24 @@ fun AppointmentsScreen(doctorId: String) {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+        .background(MaterialTheme.colorScheme.background.copy(alpha = 0.85f))
+    )
+    {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Text(
+                text = "Your Appointments",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -708,11 +723,21 @@ fun AppointmentCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Patient",
-                    modifier = Modifier.size(24.dp)
-                )
+                if (!patient.profilePicture.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = patient.profilePicture,
+                        contentDescription = "Patient Avatar",
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Patient",
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "${patient.name ?: ""} ${patient.surname ?: ""}".trim().takeIf { it.isNotBlank() } ?: "Unknown Patient",
@@ -730,6 +755,10 @@ fun AppointmentCard(
             Text(text = "Date: ${dateFormat.format(dateTime)}", style = MaterialTheme.typography.bodyMedium)
             Text(text = "Time: ${timeFormat.format(dateTime)}", style = MaterialTheme.typography.bodyMedium)
             Text(text = "Status: ${appointment.status ?: "N/A"}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Text(
+                text = "Type: ${appointment.type.replace('_', ' ').replaceFirstChar { it.uppercase() }}",
+                style = MaterialTheme.typography.bodySmall
+            )
 
 
             Row(

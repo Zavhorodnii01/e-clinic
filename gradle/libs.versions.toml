@@ -1,4 +1,5 @@
 [versions]
+accompanistZoom = "<latest-version>"
 agp = "8.7.3"
 biometric = "1.2.0"
 kotlin = "2.0.0"
@@ -25,8 +26,10 @@ media3CommonKtx = "1.7.1"
 biometricKtx = "1.1.0"
 securityCryptoKtx = "1.0.0"
 firebaseMessagingKtx = "24.1.1"
+ui = "1.8.3"
 
 [libraries]
+accompanist-zoom = { module = "com.google.accompanist:accompanist-zoom", version.ref = "accompanistZoom" }
 androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -58,6 +61,7 @@ androidx-media3-common-ktx = { group = "androidx.media3", name = "media3-common-
 androidx-biometric-ktx = { group = "androidx.biometric", name = "biometric-ktx", version.ref = "biometricKtx" }
 androidx-security-crypto-ktx = { group = "androidx.security", name = "security-crypto-ktx", version.ref = "securityCryptoKtx" }
 firebase-messaging-ktx = { group = "com.google.firebase", name = "firebase-messaging-ktx", version.ref = "firebaseMessagingKtx" }
+ui = { module = "androidx.compose.ui:ui", version.ref = "ui" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

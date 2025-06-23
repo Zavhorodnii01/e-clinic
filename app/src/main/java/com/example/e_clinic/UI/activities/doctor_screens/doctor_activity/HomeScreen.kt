@@ -5,9 +5,11 @@ import android.widget.Toast // Add this import
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -38,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Appointment
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.MedicalRecord
@@ -171,6 +174,13 @@ fun HomeScreen(){
             currentAppointment.value = null
         }
     }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                MaterialTheme.colorScheme.background.copy(alpha = 0.85f) // 85% opaque, adjust as needed
+            )
+    ){
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -178,11 +188,13 @@ fun HomeScreen(){
     ) {
         Text(
             text = when (todayAppointmentsCount.value) {
-                0 -> "You don't have any scheduled appointment today"
-                1 -> "Today you have scheduled ${todayAppointmentsCount.value} appointment"
-                else -> "Today you have scheduled ${todayAppointmentsCount.value} appointments"
+                0 -> "Hi ! You don't have any scheduled appointment today"
+                1 -> "Hi ! Today you have scheduled ${todayAppointmentsCount.value} appointment"
+                else -> "Hi ! Today you have scheduled ${todayAppointmentsCount.value} appointments"
             },
             style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
@@ -192,6 +204,7 @@ fun HomeScreen(){
                 selectedAppointment.value = appointment
             }
         )
+    }
     }
     fun openChatWithPatient(appt: Appointment) {
         Log.d("ChatDebug", "Starting openChatWithPatient()")
@@ -531,15 +544,16 @@ fun DoctorAppointmentCalendar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { today.value = today.value.minusDays(1) }) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Previous Day")
+                Icon(Icons.Default.ArrowBack, contentDescription = "Previous Day",  tint = colorScheme.onSurface)
             }
             Text(
                 text = today.value.toString(),
                 style = MaterialTheme.typography.headlineMedium,
+                color = colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
             IconButton(onClick = { today.value = today.value.plusDays(1) }) {
-                Icon(Icons.Default.ArrowForward, contentDescription = "Next Day")
+                Icon(Icons.Default.ArrowForward, contentDescription = "Next Day",  tint = colorScheme.onSurface)
             }
         }
 
@@ -565,14 +579,16 @@ fun DoctorAppointmentCalendar(
                     Text(
                         text = "%02d:00".format(hour),
                         modifier = Modifier.width(60.dp),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colorScheme.onSurface
                     )
                     if (appointmentAtHour != null) {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(start = 8.dp)
-                                .clickable { onAppointmentClick(appointmentAtHour) } // Clickable card
+                                .clickable { onAppointmentClick(appointmentAtHour) },
+                            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant)// Clickable card
                         ) {
                             Column(modifier = Modifier.padding(8.dp)) {
                                 // --- Patient Name Loading ---
@@ -594,7 +610,8 @@ fun DoctorAppointmentCalendar(
                                 // --- End Patient Name Loading ---
                                 Text(
                                     text = "Patient: ${patientName.value}",
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = colorScheme.onSurface
                                 )
                                 Text(
                                     text = "Time: ${
@@ -602,7 +619,8 @@ fun DoctorAppointmentCalendar(
                                             SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(it) // Format only time
                                         } ?: "N/A"
                                     }",
-                                    style = MaterialTheme.typography.bodySmall
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = colorScheme.onSurface
                                 )
                             }
                         }
@@ -614,7 +632,7 @@ fun DoctorAppointmentCalendar(
                                 .fillMaxWidth()
                                 .padding(start = 8.dp),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray // Indicate it's an empty slot
+                            color = colorScheme.outline
                         )
                     }
                 }
@@ -622,38 +640,3 @@ fun DoctorAppointmentCalendar(
         }
     }
 }
-
-/*// Assuming AppointmentItem is a simple composable for lists
-@Composable
-fun AppointmentItem(title: String, description: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium)
-            Text(text = description, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}*/
-
-// You MUST have a PrescribeScreen composable defined somewhere else.
-// It needs to accept patientId and an onDismiss lambda.
-
-/*@Composable
-fun PrescribeScreen(
-    fromCalendar: Boolean,
-    patientId: String?,
-    appointmentId: String?, // Added appointmentId, you might need this
-    onDismiss: () -> Unit // This is the lambda to call when done
-) {
-    // ... your existing PrescribeScreen UI and logic ...
-
-    // Example of how to call onDismiss (e.g., from a back button)
-    Column {
-        IconButton(onClick = onDismiss) { // This button closes the screen
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-        }
-        // ... rest of your prescription form/UI ...
-    }
-}*/

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -33,11 +34,14 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.sharp.Star
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.MedicalRecord
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Prescription
@@ -68,6 +72,10 @@ fun AppointmentBookingForm(
     var timeSlotDropdownExpanded by rememberSaveable { mutableStateOf(false) }
 
     var isLoading by remember { mutableStateOf(false) }
+
+    var selectedType by rememberSaveable { mutableStateOf<String?>(null) }
+    val types = listOf("online", "in_clinic")
+    var typeDropdownExpanded by rememberSaveable { mutableStateOf(false) }
 
     // Load specializations
     LaunchedEffect(Unit) {
@@ -181,6 +189,37 @@ fun AppointmentBookingForm(
                         onClick = {
                             selectedSpecialization = specialization
                             specializationDropdownExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        // Type dropdown
+        ExposedDropdownMenuBox(
+            expanded = typeDropdownExpanded,
+            onExpandedChange = { typeDropdownExpanded = !typeDropdownExpanded }
+        ) {
+            TextField(
+                value = selectedType ?: "Select Type",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Appointment Type") },
+                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeDropdownExpanded)
+                }
+            )
+            ExposedDropdownMenu(
+                expanded = typeDropdownExpanded,
+                onDismissRequest = { typeDropdownExpanded = false }
+            ) {
+                types.forEach { type ->
+                    DropdownMenuItem(
+                        text = { Text(type) },
+                        onClick = {
+                            selectedType = type
+                            typeDropdownExpanded = false
                         }
                     )
                 }
@@ -304,7 +343,8 @@ fun AppointmentBookingForm(
                                     "date" to selectedSlot,
                                     "doctor_id" to doctorId,
                                     "user_id" to userId,
-                                    "status" to "NOT_FINISHED"
+                                    "status" to "NOT_FINISHED",
+                                    "type" to selectedType,
                                 )
                                 transaction.set(appointmentsRef.document(), newAppointment)
                                 // TODO END OF TRANSACTION
@@ -564,13 +604,25 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.85f))
+    )  {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Text(
+                text = "Your Appointments",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
             ExtendedFloatingActionButton(
                 onClick = { showBookingForm = true },
                 modifier = Modifier
@@ -832,6 +884,7 @@ fun MedicalRecordsList(
                             style = MaterialTheme.typography.bodyMedium
                         )
 
+
                         Spacer(modifier = Modifier.height(4.dp))
 
                         if (record.doctors_notes.isNotEmpty()) {
@@ -927,110 +980,76 @@ fun AppointmentList(
                     .padding(horizontal = 4.dp),
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-
-                    Column(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (!doctor?.profilePicture.isNullOrEmpty()) {
+                            AsyncImage(
+                                model = doctor?.profilePicture,
+                                contentDescription = "Doctor Avatar",
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Doctor",
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = doctor?.name ?: "Loading doctor…",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = "Date: ${appointment.date?.toDate()}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "Status: ${appointment.status}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (appointment.status == "CANCELED") Color.Red else Color.Unspecified
+                            text = "Dr. ${doctor?.name ?: "Unknown"} ${doctor?.surname ?: ""}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
                     }
+                            Text(
+                                text = "Date: ${appointment.date?.toDate()}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                text = "Status: ${appointment.status}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (appointment.status == "CANCELED") Color.Red else Color.Unspecified
+                            )
+                            Text(
+                                text = "Type: ${appointment.type.replace('_', ' ').replaceFirstChar { it.uppercase() }}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
 
-                    if (appointment.status == "NOT_FINISHED") {
-                        Row {
-                            if (showCancel) {
+                        if (appointment.status == "NOT_FINISHED") {
+                            Row {
+                                if (showCancel) {
+                                    IconButton(
+                                        onClick = { onCancel(appointment) },
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Clear,
+                                            contentDescription = "Cancel Appointment",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
+
                                 IconButton(
-                                    onClick = { onCancel(appointment) },
+                                    onClick = { onStartChat(appointment) },
                                     modifier = Modifier.size(36.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Clear,
-                                        contentDescription = "Cancel Appointment",
-                                        tint = MaterialTheme.colorScheme.error
+                                        imageVector = Icons.Default.Phone,
+                                        contentDescription = "Start Chat",
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
-                            }
-
-                            IconButton(
-                                onClick = { onStartChat(appointment) },
-                                modifier = Modifier.size(36.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Phone,
-                                    contentDescription = "Start Chat",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
                         }
                     }
                 }
             }
         }
     }
-}
-
-
-/** Logs in to Zego (if not already) and opens the peer chat with this doctor. */
-/*
-fun openChatWithDoctor(appt: Appointment) {
-    val doctorId = appt.doctor_id
-    if (doctorId.isBlank()) {
-        Toast.makeText(context, "Invalid doctor ID", Toast.LENGTH_SHORT).show()
-        return
-    }
-
-    val firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
-    if (firebaseUser == null) {
-        Toast.makeText(context, "You must be logged in first.", Toast.LENGTH_SHORT).show()
-        return
-    }
-
-    val selfId      = firebaseUser.uid
-    val selfName    = firebaseUser.displayName ?: firebaseUser.email ?: selfId
-    val selfAvatar  = ""   // optional avatar URL
-
-    */
-/* If we’re already the same Zego user, skip connectUser. *//*
-
-    val localUser = com.zegocloud.zimkit.services.ZIMKit.getLocalUser()
-    val readyBlock = {
-        // ✨ jump directly into the 1-on-1 chat
-        ZIMKitRouter.toMessageActivity(
-            context,
-            doctorId,
-            ZIMKitConversationType.ZIMKitConversationTypePeer
-        )
-    }
-
-    if (localUser != null && localUser.id == selfId) {
-        readyBlock()
-    } else {
-        com.zegocloud.zimkit.services.ZIMKit.connectUser(selfId, selfName, selfAvatar) { err ->
-            if (err == null || err.code.value() == 0) {
-                readyBlock()
-            } else {
-                Toast.makeText(context, "Chat login failed: ${err.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-}
-*/
-
 
 @Composable
 private fun TabButton(

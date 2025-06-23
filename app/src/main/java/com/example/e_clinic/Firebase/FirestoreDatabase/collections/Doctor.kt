@@ -19,5 +19,6 @@ data class Doctor(
     val phone: String = "",
     val specialization: String = "",
     val surname: String = "",
+    val profilePicture: String = ""
 
 )

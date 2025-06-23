@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,7 +23,9 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -44,6 +48,7 @@ import coil.compose.AsyncImage
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Administrator
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Doctor
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.TimeSlot
+import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.BottomNavigationBar
 import com.example.e_clinic.UI.theme.EClinicTheme
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
@@ -121,13 +126,18 @@ fun MainScreen() {
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.White,
-                    titleContentColor = Color.Black
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
         bottomBar = {
-            BottomNavigationBar(navController)
+            Box(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                AdminBottomNavigationBar(navController)
+            }
         }
     ) { innerPadding ->
         SetupNavHost(navController, Modifier.padding(innerPadding), onProfilePictureChanged = { reloadTrigger++ })
@@ -135,16 +145,16 @@ fun MainScreen() {
 }
 
 @Composable
-fun BottomNavigationBar(navController: NavController) {
-    Surface(
+fun AdminBottomNavigationBar(navController: NavController) {
+    Box(
         modifier = Modifier
             .padding(horizontal = 24.dp, vertical = 16.dp)
             .fillMaxWidth()
-            .height(64.dp),
-        shape = RoundedCornerShape(32.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shadowElevation = 12.dp
-    ) {
+            .height(64.dp)
+            .shadow(20.dp, RoundedCornerShape(32.dp), clip = false)
+            .clip(RoundedCornerShape(32.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+    ){
         Row(
             modifier = Modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -153,7 +163,7 @@ fun BottomNavigationBar(navController: NavController) {
             NavigationBarItem(
                 icon = {
                     Icon(
-                        imageVector = Icons.Filled.Person,
+                        imageVector = Icons.Filled.MedicalServices,
                         contentDescription = "Doctors"
                     )
                 },
@@ -165,7 +175,7 @@ fun BottomNavigationBar(navController: NavController) {
             NavigationBarItem(
                 icon = {
                     Icon(
-                        imageVector = Icons.Filled.AccountBox,
+                        imageVector = Icons.Filled.People,
                         contentDescription = "Patients"
                     )
                 },

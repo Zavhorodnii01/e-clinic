@@ -5,12 +5,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
@@ -22,9 +26,11 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
+import coil.compose.AsyncImage
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Doctor
 import kotlin.compareTo
 import kotlin.text.clear
@@ -55,7 +61,8 @@ fun DoctorsScreen() {
                     email = document.getString("e-mail") ?: "Unknown",
                     specialization = document.getString("specialization") ?: "Unknown",
                     address = document.getString("address") ?: "Unknown",
-                    experience = document.getString("experience")?: "0"
+                    experience = document.getString("experience")?: "0",
+                    profilePicture = document.getString("profilePicture") ?: "",
                 )
                 doctors.add(doctor)
             }
@@ -99,13 +106,39 @@ fun DoctorsScreen() {
                 ) {
                     if (rotation <= 90f) {
                         // Front side
-                        Text(
-                            text = "${doctor.name} ${doctor.surname} (${doctor.gender})\nPhone: ${doctor.phone}\nEmail: ${doctor.email}\nSpecialization: ${doctor.specialization}" +
-                                    "\nAddress: ${doctor.address} \nExperience: ${doctor.experience} years",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Start
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (!doctor.profilePicture.isNullOrEmpty()) {
+                                AsyncImage(
+                                    model = doctor.profilePicture,
+                                    contentDescription = "Doctor Avatar",
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .clip(CircleShape)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "Doctor",
+                                    modifier = Modifier.size(56.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = "${doctor.name} ${doctor.surname} (${doctor.gender})",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(text = "Phone: ${doctor.phone}")
+                                Text(text = "Email: ${doctor.email}")
+                                Text(text = "Specialization: ${doctor.specialization}")
+                                Text(text = "Address: ${doctor.address}")
+                                Text(text = "Experience: ${doctor.experience} years")
+                            }
+                        }
                     } else {
                         // Back side
                         Column(

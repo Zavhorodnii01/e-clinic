@@ -7,14 +7,28 @@ import androidx.activity.ComponentActivity
 import com.example.e_clinic.Services.Service
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -32,18 +46,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.e_clinic.UI.theme.EClinicTheme
 import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
 import com.example.e_clinic.ZEGOCloud.launchZegoChat
-import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.ServiceListItem
+//import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.ServiceListItem
 import com.example.e_clinic.UI.activities.user_screens.UserLogInActivity
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
@@ -51,6 +72,7 @@ import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
 import com.google.firebase.messaging.FirebaseMessaging
+import kotlin.text.get
 
 //import com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.ServiceListItem
 
@@ -67,6 +89,27 @@ class UserActivity : ComponentActivity() {
 
         setupNotifications()
 
+    }
+    private val updateUserDataLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        // Optionally refresh user data here
+    }
+    override fun onStart() {
+        super.onStart()
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val db = FirebaseFirestore.getInstance()
+        db.collection("users").document(userId).get()
+            .addOnSuccessListener { doc ->
+                val dob = doc.getTimestamp("dob")
+                val address = doc.getString("address")
+                val gender = doc.getString("gender")
+                val phone = doc.getString("phone")
+                if (dob == null || address.isNullOrBlank() || gender.isNullOrBlank() || phone.isNullOrBlank()) {
+                    val intent = Intent(this, UpdateUserDataActivity::class.java)
+                    updateUserDataLauncher.launch(intent)
+                }
+            }
     }
     private fun setupNotifications() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -96,9 +139,8 @@ class UserActivity : ComponentActivity() {
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
-    val context = LocalContext.current
-    var showSettings by remember { mutableStateOf(false) }
     var userName by remember { mutableStateOf("") }
+    var profilePictureUrl by remember { mutableStateOf<String?>(null) }
 
     val user = FirebaseAuth.getInstance().currentUser
     user?.let {
@@ -108,6 +150,7 @@ fun MainScreen() {
             .addOnSuccessListener { document ->
                 if (document != null) {
                     userName = document.getString("name") ?: "Unknown User"
+                    profilePictureUrl = document.getString("profilePicture")
                 }
             }
             .addOnFailureListener {
@@ -118,34 +161,48 @@ fun MainScreen() {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Welcome $userName!") },
-                colors = TopAppBarDefaults.topAppBarColors(
+                title = { Text("eClinic Patient", fontWeight = FontWeight.Bold, fontSize = 22.sp, modifier = Modifier.padding(start = 8.dp)) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.navigate("profile") }) {
+                        if (!profilePictureUrl.isNullOrEmpty()) {
+                            // Use Coil or similar for async image loading
+                            AsyncImage(
+                                model = profilePictureUrl,
+                                contentDescription = "Profile",
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Filled.AccountCircle,
+                                contentDescription = "Profile",
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape),
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                actions = {
-                    IconButton(onClick = { showSettings = true }) {
-                        Icon(imageVector = Icons.Default.Menu, contentDescription = "Menu")
-                    }
-                    IconButton(onClick = {FirebaseAuth.getInstance().signOut()
-                    val intent = Intent(context, UserLogInActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    context.startActivity(intent)}) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Logout")
-                    }
-                }
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                )
             )
         },
         bottomBar = {
-            BottomNavigationBar(navController = navController)
+            Box(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.85f))
+            ) {
+                BottomNavigationBar(navController = navController)
+            }
         }
     ) { innerPadding ->
         NavigationHost(navController = navController, modifier = Modifier.padding(innerPadding))
     }
-    if (showSettings) {
-        SettingsScreen(onClose = { showSettings = false })
-    }
+
 }
 
 
@@ -157,10 +214,6 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier = Modifi
 
         composable("services") {
             ServicesScreen(navController = navController)
-        }
-
-        composable("documents") {
-            DocumentScreen()
         }
 
         // Uncomment this if ChatScreen is implemented
@@ -177,10 +230,10 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier = Modifi
             ProfileScreen()
         }
 
-        composable("settings") {
-            SettingsScreen(onClose = {
-                navController.popBackStack() // Optional: closes settings
-            })
+        composable("documents") {
+            DocumentScreenForm(
+                userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+            )
         }
 
         composable("appointment_screen/{userId}") { backStackEntry ->
@@ -212,55 +265,51 @@ fun PreviewMainScreen() {
 
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {
+    val currentDestination = navController.currentBackStackEntryAsState().value?.destination?.route
     val context = LocalContext.current
+    Box(
+        modifier = Modifier
+            .padding(horizontal = 24.dp, vertical = 16.dp)
+            .fillMaxWidth()
+            .height(64.dp)
+            .shadow(20.dp, RoundedCornerShape(32.dp), clip = false)
+            .clip(RoundedCornerShape(32.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            NavigationBarItem(
+                icon = { Icon(Icons.Default.Home, null) },
+                label = { Text("Home") },
+                selected = currentDestination == "home",
+                onClick = { navController.navigate("home") },
+                alwaysShowLabel = true
+            )
+            NavigationBarItem(
+                icon = { Icon(Icons.Default.CalendarToday, null) },
+                label = { Text("Appointments") },
+                selected = currentDestination == "appointments",
+                onClick = { navController.navigate("appointments") },
+                alwaysShowLabel = true
+            )
+            NavigationBarItem(
+                icon = { Icon(Icons.Default.Build, null) },
+                label = { Text("Services") },
+                selected = currentDestination == "services",
+                onClick = { navController.navigate("services") },
+                alwaysShowLabel = true
+            )
 
-    NavigationBar {
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Home, null) },
-            label = { Text("Home") },
-            selected = false,
-            onClick = { navController.navigate("home") }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.AccountBox, null) },
-            label = { Text("Chat") },
-            selected = false,
-            onClick = {
-                // Directly launch chat here
-                launchZegoChat(context)
-            }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Check, null) },
-            label = { Text("Appointments") },
-            selected = false,
-            onClick = { navController.navigate("appointments") }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Check, null) },
-            label = { Text("Services") },
-            selected = false,
-            onClick = { navController.navigate("services") }
-        )
-
-        /*NavigationBarItem(
-            icon = { Icon(Icons.Default.ShoppingCart, null) },
-            label = { Text("Documents") },
-            selected = false,
-            onClick = { navController.navigate("documents") }
-        )*/
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Menu, null) },
-            label = { Text("Profile") },
-            selected = false,
-            onClick = { navController.navigate("profile") }
-        )
+            NavigationBarItem(
+                icon = { Icon(Icons.Default.Forum, null) },
+                label = { Text("Chat") },
+                selected = false,
+                onClick = { launchZegoChat(context) },
+                alwaysShowLabel = true
+            )
+        }
     }
 }
-
-/*@Composable
-fun ChatScreen() {
-    val context = LocalContext.current
-    launchZegoChat(context)
-    Text("Chat Screen")
-}*/

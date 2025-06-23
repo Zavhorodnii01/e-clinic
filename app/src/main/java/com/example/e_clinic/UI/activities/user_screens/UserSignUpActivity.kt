@@ -11,37 +11,46 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.User
 import com.example.e_clinic.R
+import com.example.e_clinic.UI.theme.EClinicTheme
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
+import java.text.SimpleDateFormat
 import java.util.*
 
 class UserSignUpActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            enableEdgeToEdge()
-            RegistrationScreen(onSignUpSuccess = {
-                startActivity(Intent(this, UserLogInActivity::class.java))
-                finish()
-            })
+            EClinicTheme {
+                RegistrationScreen(onSignUpSuccess = {
+                    startActivity(Intent(this, UserLogInActivity::class.java))
+                    finish()
+                })
+            }
         }
     }
 }
@@ -99,7 +108,7 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
                                             name = account.displayName.orEmpty(),
                                             surname = "",
                                             phone = "",
-                                            dob = "",
+                                            dob = null,
                                             gender = "",
                                             address = ""
                                         )
@@ -165,7 +174,7 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
                         name = name,
                         surname = surname,
                         phone = phone,
-                        dob = dob,
+                        dob = parseDobToTimestamp(dob),
                         gender = selectedGender,
                         address = address,
                     )
@@ -183,81 +192,201 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
             }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center
+            .background(
+                MaterialTheme.colorScheme.background
+            ),
+        contentAlignment = Alignment.Center
     ) {
-        OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("First Name") }, modifier = Modifier.fillMaxWidth())
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = surname, onValueChange = { surname = it }, label = { Text("Last Name") }, modifier = Modifier.fillMaxWidth())
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth())
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone Number") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth())
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = confirmPassword, onValueChange = { confirmPassword = it }, label = { Text("Confirm Password") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Address") }, modifier = Modifier.fillMaxWidth())
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = dob,
+        Card(
+            shape = RoundedCornerShape(12.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { datePickerDialog.show() }
-                .padding(12.dp),
-            color = if (dob == "Select Date of Birth") Color.Gray else Color.Black
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.fillMaxWidth()) {
-            listOf("Male", "Female").forEach { gender ->
-                DropdownMenuItem(
-                    text = { Text(gender) },
-                    onClick = {
-                        selectedGender = gender
-                        expanded = false
-                    }
+                .padding(16.dp)
+                .widthIn(max = 420.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(28.dp)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Create Patient Account",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp
+                    ),
+                    modifier = Modifier.padding(bottom = 18.dp)
                 )
+
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("First Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = surname,
+                    onValueChange = { surname = it },
+                    label = { Text("Last Name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = { Text("Phone Number") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = address,
+                    onValueChange = { address = it },
+                    label = { Text("Address") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = { expanded = true },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = if (selectedGender.isEmpty()) "Gender" else selectedGender,
+                            color = if (selectedGender.isEmpty()) Color.Gray else Color.Unspecified
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        listOf("Male", "Female").forEach { gender ->
+                            DropdownMenuItem(
+                                text = { Text(gender) },
+                                onClick = {
+                                    selectedGender = gender
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                    Button(
+                        onClick = { datePickerDialog.show() },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = if (dob == "Select Date of Birth") "Date of Birth" else dob,
+                            color = if (dob == "Select Date of Birth") Color.Gray else Color.Unspecified
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
+                    label = { Text("Confirm Password") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = { registerUser() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Register", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                IconButton(
+                    onClick = { signUpWithGoogle() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.google_sign_up),
+                        contentDescription = "Google Sign-Up",
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(200.dp)
+                    )
+                }
             }
         }
-
-        Text(
-            text = selectedGender,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = true }
-                .padding(12.dp),
-            color = if (selectedGender.isEmpty()) Color.Gray else Color.Black
+    }
+    if (errorMessage != null) {
+        AlertDialog(
+            onDismissRequest = { errorMessage = null },
+            title = { Text("Error") },
+            text = { Text(errorMessage ?: "") },
+            confirmButton = {
+                TextButton(onClick = { errorMessage = null }) {
+                    Text("OK")
+                }
+            }
         )
+    }
+    if (successMessage != null) {
+        AlertDialog(
+            onDismissRequest = { successMessage = null },
+            title = { Text("Success") },
+            text = { Text(successMessage ?: "") },
+            confirmButton = {
+                TextButton(onClick = {
+                    successMessage = null
+                    onSignUpSuccess()
+                }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+}
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(onClick = { registerUser() }, modifier = Modifier.fillMaxWidth()) {
-            Text("Register")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        IconButton(
-            onClick = { signUpWithGoogle() },
-            modifier = Modifier.size(200.dp)
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.google_sign_up),
-                contentDescription = "Google Sign-Up",
-                tint = Color.Unspecified,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-
-        Spacer(modifier = Modifier.height(5.dp))
-        errorMessage?.let { Text(text = it, color = Color.Red) }
-        successMessage?.let { Text(text = it, color = Color.Green) }
+fun parseDobToTimestamp(dob: String): Timestamp? {
+    return try {
+        val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        val date = sdf.parse(dob)
+        if (date != null) Timestamp(date) else null
+    } catch (e: Exception) {
+        null
     }
 }

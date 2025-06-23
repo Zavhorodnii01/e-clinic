@@ -71,12 +71,20 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.font.FontWeight
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.zegocloud.zimkit.common.ZIMKitRouter
 import com.zegocloud.zimkit.common.enums.ZIMKitConversationType
 import com.zegocloud.zimkit.services.ZIMKit
 import kotlinx.coroutines.tasks.await
+import kotlin.compareTo
+import kotlin.div
+import kotlin.rem
+import kotlin.text.format
+import kotlin.text.get
+import kotlin.text.toInt
+import kotlin.times
 
 @Composable
 fun HomeScreen() {
@@ -107,9 +115,20 @@ fun HomeScreen() {
         }
     }
 
+    LaunchedEffect(user) {
+        user?.let {
+            appointmentRepository.getAppointmentsForUser(it.uid) { loadedAppointments ->
+                appointments.value = loadedAppointments
+                    .filter { it.status != "CANCELED" }
+                    .sortedBy { it.date?.toDate()?.time ?: 0 }
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.85f))
             .padding(16.dp)
     ) {
         // Original health tip card (with safe refresh)
@@ -157,11 +176,12 @@ fun HomeScreen() {
         Text(
             text = "Your Next Appointment: ",
             style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
         appointments.value.firstOrNull()?.let { appointment ->
-            NextAppointmentItem(appointment = appointment, doctor = null)
+            NextAppointmentItem(appointment = appointment)
         } ?: Text("No upcoming appointments")
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -292,13 +312,14 @@ private suspend fun loadHealthTip(
 fun CalendarWidget(allAppointments: List<Appointment>) {
     val context = LocalContext.current
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
-    val appointments = allAppointments.filter { it.user_id == currentUserId }
+    val appointments = allAppointments.filter { it.user_id == currentUserId && it.status != "CANCELLED" }
 
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
     val daysInMonth = currentMonth.lengthOfMonth()
     val firstDayOfMonth = currentMonth.atDay(1).dayOfWeek.value % 7
     val selectedDate = remember { mutableStateOf<LocalDate?>(null) }
     val colorScheme = MaterialTheme.colorScheme
+
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -411,230 +432,239 @@ fun CalendarWidget(allAppointments: List<Appointment>) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
-            .background(colorScheme.surface, shape = RoundedCornerShape(8.dp))
-            .border(1.dp, colorScheme.onSurface, shape = RoundedCornerShape(8.dp))
-            .padding(16.dp)
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = { currentMonth = currentMonth.minusMonths(1) }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Previous Month")
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+            shape = RoundedCornerShape(12.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { currentMonth = currentMonth.minusMonths(1) }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Previous Month")
+                    }
+                    Text(
+                        text = "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale.US)} ${currentMonth.year}",
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    IconButton(onClick = { currentMonth = currentMonth.plusMonths(1) }) {
+                        Icon(Icons.Default.ArrowForward, contentDescription = "Next Month")
+                    }
                 }
-                Text(
-                    text = "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale.US)} ${currentMonth.year}",
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                IconButton(onClick = { currentMonth = currentMonth.plusMonths(1) }) {
-                    Icon(Icons.Default.ArrowForward, contentDescription = "Next Month")
-                }
-            }
 
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-                    .pointerInput(currentMonth, appointments) {
-                        detectTapGestures { offset ->
-                            val dayWidth = size.width / 7
-                            val dayHeight = size.height / 6
-                            val column = (offset.x / dayWidth).toInt()
-                            val row = (offset.y / dayHeight).toInt()
-                            val day = row * 7 + column - firstDayOfMonth + 1
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                        .pointerInput(currentMonth, appointments) {
+                            detectTapGestures { offset ->
+                                val dayWidth = size.width / 7
+                                val dayHeight = size.height / 6
+                                val column = (offset.x / dayWidth).toInt()
+                                val row = (offset.y / dayHeight).toInt()
+                                val day = row * 7 + column - firstDayOfMonth + 1
 
-                            if (day in 1..daysInMonth) {
-                                val clickedDate = currentMonth.atDay(day)
-                                selectedDate.value = clickedDate
+                                if (day in 1..daysInMonth) {
+                                    val clickedDate = currentMonth.atDay(day)
+                                    selectedDate.value = clickedDate
 
-                                val appointmentsForDay = appointments.filter { appointment ->
-                                    appointment.date?.toDate()?.toInstant()
-                                        ?.atZone(ZoneId.systemDefault())
-                                        ?.toLocalDate() == clickedDate
-                                }
-
-                                if (appointmentsForDay.isNotEmpty()) {
-                                    selectedAppointments = appointmentsForDay
-                                    currentAppointmentIndex = 0
-                                    showDialog = true
-
-                                    coroutineScope.launch {
-                                        val doctorId = appointmentsForDay[0].doctor_id
-                                        try {
-                                            val docSnap = FirebaseFirestore.getInstance()
-                                                .collection("doctors")
-                                                .document(doctorId)
-                                                .get()
-                                                .await()
-                                            selectedDoctor = docSnap.toObject(Doctor::class.java)?.apply {
-                                                id = docSnap.id
-                                            }
-                                        } catch (e: Exception) {
-                                            Log.e("CalendarWidget", "Error fetching doctor", e)
-                                            selectedDoctor = null
-                                        }
+                                    val appointmentsForDay = appointments.filter { appointment ->
+                                        appointment.date?.toDate()?.toInstant()
+                                            ?.atZone(ZoneId.systemDefault())
+                                            ?.toLocalDate() == clickedDate
                                     }
-                                } else {
-                                    selectedAppointments = emptyList()
-                                    selectedDoctor = null
-                                    showDialog = true
+
+                                    if (appointmentsForDay.isNotEmpty()) {
+                                        selectedAppointments = appointmentsForDay
+                                        currentAppointmentIndex = 0
+                                        showDialog = true
+
+                                        coroutineScope.launch {
+                                            val doctorId = appointmentsForDay[0].doctor_id
+                                            try {
+                                                val docSnap = FirebaseFirestore.getInstance()
+                                                    .collection("doctors")
+                                                    .document(doctorId)
+                                                    .get()
+                                                    .await()
+                                                selectedDoctor = docSnap.toObject(Doctor::class.java)?.apply {
+                                                    id = docSnap.id
+                                                }
+                                            } catch (e: Exception) {
+                                                Log.e("CalendarWidget", "Error fetching doctor", e)
+                                                selectedDoctor = null
+                                            }
+                                        }
+                                    } else {
+                                        selectedAppointments = emptyList()
+                                        selectedDoctor = null
+                                        showDialog = true
+                                    }
                                 }
                             }
                         }
-                    }
-            ) {
-                val dayWidth = size.width / 7
-                val dayHeight = size.height / 6
+                ) {
+                    val dayWidth = size.width / 7
+                    val dayHeight = size.height / 6
 
-                for (day in 1..daysInMonth) {
-                    val column = (day + firstDayOfMonth - 1) % 7
-                    val row = (day + firstDayOfMonth - 1) / 7
-                    val x = column * dayWidth + dayWidth / 2
-                    val y = row * dayHeight + dayHeight / 2
+                    for (day in 1..daysInMonth) {
+                        val column = (day + firstDayOfMonth - 1) % 7
+                        val row = (day + firstDayOfMonth - 1) / 7
+                        val x = column * dayWidth + dayWidth / 2
+                        val y = row * dayHeight + dayHeight / 2
 
-                    if (day in appointmentDays) {
-                        drawCircle(
-                            color = Color.Yellow,
-                            radius = minOf(dayWidth, dayHeight) / 3,
-                            center = Offset(x, y)
+                        if (day in appointmentDays) {
+                            drawCircle(
+                                color = colorScheme.primaryContainer, // Subtle color
+                                radius = minOf(dayWidth, dayHeight) / 3,
+                                center = Offset(x, y)
+                            )
+                        }
+
+                        drawContext.canvas.nativeCanvas.drawText(
+                            day.toString(),
+                            x,
+                            y + 15f,
+                            android.graphics.Paint().apply {
+                                textAlign = android.graphics.Paint.Align.CENTER
+                                textSize = 40f
+                                color = colorScheme.onSurface.toArgb()
+                            }
                         )
                     }
+                }
 
-                    drawContext.canvas.nativeCanvas.drawText(
-                        day.toString(),
-                        x,
-                        y + 15f,
-                        android.graphics.Paint().apply {
-                            textAlign = android.graphics.Paint.Align.CENTER
-                            textSize = 40f
-                            color = colorScheme.onSurface.toArgb()
+                // ... (Dialog code unchanged)
+                if (showDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showDialog = false },
+                        title = { Text("Appointment Details") },
+                        text = {
+                            if (selectedAppointments.isEmpty()) {
+                                Text("No appointment found on ${selectedDate.value}")
+                            } else {
+                                val appointment = selectedAppointments[currentAppointmentIndex]
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("Date: ${selectedDate.value}")
+                                    if (selectedDoctor != null) {
+                                        Text("Doctor: Dr. ${selectedDoctor!!.name} ${selectedDoctor!!.surname}")
+                                        Text("Specialization: ${selectedDoctor!!.specialization}")
+                                    } else {
+                                        Text("Loading doctor info...")
+                                    }
+                                    Text("Status: ${appointment.status}")
+
+                                    Spacer(modifier = Modifier.height(16.dp))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        IconButton(
+                                            onClick = {
+                                                currentAppointmentIndex =
+                                                    if (currentAppointmentIndex == 0) selectedAppointments.size - 1
+                                                    else currentAppointmentIndex - 1
+                                            },
+                                            enabled = selectedAppointments.size > 1
+                                        ) {
+                                            Icon(Icons.Default.ArrowBack, contentDescription = "Previous Appointment")
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                currentAppointmentIndex =
+                                                    if (currentAppointmentIndex == selectedAppointments.size - 1) 0
+                                                    else currentAppointmentIndex + 1
+                                            },
+                                            enabled = selectedAppointments.size > 1
+                                        ) {
+                                            Icon(Icons.Default.ArrowForward, contentDescription = "Next Appointment")
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(24.dp))
+
+                                    Button(
+                                        onClick = { openChatWithDoctor(appointment) },
+                                        enabled = selectedDoctor != null
+                                    ) {
+                                        Text("Chat with Doctor")
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showDialog = false }) {
+                                Text("Close")
+                            }
                         }
                     )
                 }
-            }
-
-            if (showDialog) {
-                AlertDialog(
-                    onDismissRequest = { showDialog = false },
-                    title = { Text("Appointment Details") },
-                    text = {
-                        if (selectedAppointments.isEmpty()) {
-                            Text("No appointment found on ${selectedDate.value}")
-                        } else {
-                            val appointment = selectedAppointments[currentAppointmentIndex]
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("Date: ${selectedDate.value}")
-                                if (selectedDoctor != null) {
-                                    Text("Doctor: Dr. ${selectedDoctor!!.name} ${selectedDoctor!!.surname}")
-                                    Text("Specialization: ${selectedDoctor!!.specialization}")
-                                } else {
-                                    Text("Loading doctor info...")
-                                }
-                                Text("Status: ${appointment.status}")
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    IconButton(
-                                        onClick = {
-                                            currentAppointmentIndex =
-                                                if (currentAppointmentIndex == 0) selectedAppointments.size - 1
-                                                else currentAppointmentIndex - 1
-                                        },
-                                        enabled = selectedAppointments.size > 1
-                                    ) {
-                                        Icon(Icons.Default.ArrowBack, contentDescription = "Previous Appointment")
-                                    }
-                                    IconButton(
-                                        onClick = {
-                                            currentAppointmentIndex =
-                                                if (currentAppointmentIndex == selectedAppointments.size - 1) 0
-                                                else currentAppointmentIndex + 1
-                                        },
-                                        enabled = selectedAppointments.size > 1
-                                    ) {
-                                        Icon(Icons.Default.ArrowForward, contentDescription = "Next Appointment")
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(24.dp))
-
-                                // Chat Button
-                                Button(
-                                    onClick = { openChatWithDoctor(appointment) },
-                                    enabled = selectedDoctor != null
-                                ) {
-                                    Text("Chat with Doctor")
-                                }
-                            }
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(onClick = { showDialog = false }) {
-                            Text("Close")
-                        }
-                    }
-                )
             }
         }
     }
 }
 
 @Composable
-fun NextAppointmentItem(
-    appointment: Appointment,
-    doctor: Doctor? = null
-){
+fun NextAppointmentItem(appointment: Appointment) {
+    if (appointment.status == "CANCELED" || appointment.status == "FINISHED") {Text("No upcoming appointments"); return}
     val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
     val timeFormat = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
+    val doctor = remember { mutableStateOf<Doctor?>(null) }
 
-    if (appointment == null) {
-        Text(
-            text = "No upcoming appointments",
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(16.dp)
-        )
+    // Fetch doctor info when appointment changes
+    LaunchedEffect(appointment.doctor_id) {
+        appointment.doctor_id?.let { doctorId ->
+            FirebaseFirestore.getInstance().collection("doctors").document(doctorId)
+                .get()
+                .addOnSuccessListener { doc ->
+                    doctor.value = doc.toObject(Doctor::class.java)?.apply { id = doc.id }
+                }
+                .addOnFailureListener { doctor.value = null }
+        }
     }
-    else{
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        ){
-            Column(Modifier.padding(16.dp)) {
-                doctor?.let {
-                    Text(
-                        text = "Dr. ${it.name} ${it.surname}/n ${it.specialization}",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                } ?: Text(
-                    text = "Loading doctor info...",
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            doctor.value?.let {
+                Text(
+                    text = "Dr. ${it.name} ${it.surname}",
                     style = MaterialTheme.typography.titleMedium
                 )
-                appointment.date?.let {
-                    Column {
-                        Text(
-                            text = dateFormat.format(it.toDate()),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = timeFormat.format(it.toDate()),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+                Text(
+                    text = it.specialization,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            } ?: Text(
+                text = "Loading doctor info...",
+                style = MaterialTheme.typography.titleMedium
+            )
+            appointment.date?.let {
+                Column {
+                    Text(
+                        text = dateFormat.format(it.toDate()),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = timeFormat.format(it.toDate()),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
             }
         }
     }
 }
-

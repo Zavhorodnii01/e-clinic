@@ -24,7 +24,6 @@ import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Doctor
 import com.example.e_clinic.ZEGOCloud.launchZegoChat
 import com.example.e_clinic.Services.Service
 import com.example.e_clinic.UI.activities.doctor_screens.DoctorLogInActivity
-import com.example.e_clinic.UI.activities.user_screens.user_activity.SettingsScreen
 import com.example.e_clinic.UI.theme.EClinicTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -36,12 +35,21 @@ import com.google.firebase.firestore.firestore
 import com.google.firebase.messaging.FirebaseMessaging
 import android.app.AlertDialog
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Appointment
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.MedicalRecord
 import com.example.e_clinic.Firebase.Repositories.AppointmentRepository
-import com.example.e_clinic.ui.activities.doctor_screens.DoctorProfileScreen
+import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.DoctorProfileScreen
 import com.google.firebase.Timestamp
 
 
@@ -60,6 +68,8 @@ class DoctorActivity : ComponentActivity() {
         setContent {
             EClinicTheme {
                 MaterialTheme {
+
+
                     MainScreen()
                 }
             }
@@ -102,10 +112,10 @@ class DoctorActivity : ComponentActivity() {
 fun MainScreen() {
     val navController = rememberNavController()
     val context = LocalContext.current
-    var showSettings by remember { mutableStateOf(false) }
     var doctorName by remember { mutableStateOf("Loading...") }
     val doctor = Doctor()
     val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    var profilePictureUrl by remember { mutableStateOf<String?>(null) }
     val appointments = remember { mutableStateListOf<Appointment>() }
     val urgentAppointmentId = remember { mutableStateOf<String?>(null) }
     val doctorState = remember { mutableStateOf<String?>(null) }
@@ -144,6 +154,7 @@ fun MainScreen() {
                     val doctorDoc = documents.documents.firstOrNull()
                     doctorName = doctorDoc?.getString("name") ?: "Unknown Doctor"
                     doctorState.value = doctorDoc?.id
+                    profilePictureUrl = doctorDoc?.getString("profilePicture")
                 }
                 .addOnFailureListener {
                     doctorName = "Unknown Doctor"
@@ -254,30 +265,46 @@ fun MainScreen() {
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Welcome $doctorName!") },
-                colors = TopAppBarDefaults.topAppBarColors(
+                title = { Text("eClinic Doctor", fontWeight = FontWeight.Bold, fontSize = 22.sp, modifier = Modifier.padding(start = 8.dp)) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.navigate("profile") }) {
+                        if (!profilePictureUrl.isNullOrEmpty()) {
+                            // Use Coil or similar for async image loading
+                            AsyncImage(
+                                model = profilePictureUrl,
+                                contentDescription = "Profile",
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Filled.AccountCircle,
+                                contentDescription = "Profile",
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape),
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                actions = {
-                    IconButton(onClick = { showSettings = true }) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu")
-                    }
-                    IconButton(onClick = {
-                        FirebaseAuth.getInstance().signOut()
-                        val intent = Intent(context, DoctorLogInActivity::class.java)
-                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        context.startActivity(intent)
-                    }) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Logout")
-                    }
-                }
+                )
             )
         },
         bottomBar = {
-            BottomNavigationBar(navController)
+            Box(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.85f))
+            ) {
+                BottomNavigationBar(navController)
+            }
         }
     ) { innerPadding ->
         NavigationHost(navController, Modifier.padding(innerPadding), doctor, userId)
@@ -333,12 +360,6 @@ fun MainScreen() {
             }
         )
     }
-
-
-
-    if (showSettings) {
-        SettingsScreen(onClose = { showSettings = false })
-    }
 }
 
 
@@ -362,7 +383,6 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier, doctor:
         composable("services") { ServicesScreen(navController) }
         composable("prescriptions") { PrescribeScreen() }
         composable("profile") { DoctorProfileScreen() }
-        composable("settings") { SettingsScreen(onClose = {}) }
 
         composable("prescribe/{fromCalendar}/{patientId}") { backStackEntry ->
             val fromCalendar = backStackEntry.arguments?.getString("fromCalendar")?.toBoolean() ?: false
@@ -376,67 +396,48 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier, doctor:
 fun BottomNavigationBar(navController: NavHostController) {
     val currentDestination = navController.currentBackStackEntryAsState().value?.destination?.route
     val context = LocalContext.current
-    NavigationBar {
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Home, null) },
-            label = { Text("Home") },
-            selected = currentDestination == "home",
-            onClick = { navController.navigate("home") }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Check, null) },
-            label = { Text("Appointments") },
-            selected = currentDestination == "appointments",
-            onClick = { navController.navigate("appointments") }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.AccountBox, null) },
-            label = { Text("Services") },
-            selected = currentDestination == "services",
-            onClick = { navController.navigate("services") }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.AccountBox, null) },
-            label = { Text("Chat") },
-            selected = false,
-            onClick = {
-
-                launchZegoChat(context)
-            }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Person, null) },
-            label = { Text("Profile") },
-            selected = currentDestination == "profile",
-            onClick = { navController.navigate("profile") }
-        )
-    }
-}
-
-
-@Composable
-fun ServiceListItem(
-    service: Service,
-    onClick: () -> Unit
-) {
-    Card(
+    Box(
         modifier = Modifier
+            .padding(horizontal = 24.dp, vertical = 16.dp)
             .fillMaxWidth()
-            .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            .height(64.dp)
+            .shadow(20.dp, RoundedCornerShape(32.dp), clip = false)
+            .clip(RoundedCornerShape(32.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = service.displayedName,
-                style = MaterialTheme.typography.titleMedium
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            NavigationBarItem(
+                icon = { Icon(Icons.Default.Home, null) },
+                label = { Text("Home") },
+                selected = currentDestination == "home",
+                onClick = { navController.navigate("home") },
+                alwaysShowLabel = true
             )
-            if (service.description.isNotBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = service.description,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
+            NavigationBarItem(
+                icon = { Icon(Icons.Default.CalendarToday, null) },
+                label = { Text("Appointments") },
+                selected = currentDestination == "appointments",
+                onClick = { navController.navigate("appointments") },
+                alwaysShowLabel = true
+            )
+            NavigationBarItem(
+                icon = { Icon(Icons.Default.Build, null) },
+                label = { Text("Services") },
+                selected = currentDestination == "services",
+                onClick = { navController.navigate("services") },
+                alwaysShowLabel = true
+            )
+            NavigationBarItem(
+                icon = { Icon(Icons.Default.Forum, null) },
+                label = { Text("Chat") },
+                selected = false,
+                onClick = { launchZegoChat(context) },
+                alwaysShowLabel = true
+            )
         }
     }
 }

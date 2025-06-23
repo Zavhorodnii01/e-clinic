@@ -1,5 +1,6 @@
 package com.example.e_clinic.UI.activities.doctor_screens.doctor_activity
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.verticalScroll
@@ -13,7 +14,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.e_clinic.CSV.collections.Drug
@@ -39,7 +42,7 @@ fun PrescribeScreenForm(doctorId: String, medicalRecordId: String) {
     var selectedRecord by rememberSaveable { mutableStateOf<Pair<String, String>?>(null) }
     var showRecordsDialog by rememberSaveable { mutableStateOf(false) }
 
-    var selectedMedication by rememberSaveable { mutableStateOf<Drug?>(null) }
+    var selectedMedication by remember { mutableStateOf<Drug?>(null) }
     var showMedicationDialog by rememberSaveable { mutableStateOf(false) }
 
     var dosage by rememberSaveable { mutableStateOf("") }
@@ -107,12 +110,8 @@ fun PrescribeScreenForm(doctorId: String, medicalRecordId: String) {
             Spacer(modifier = Modifier.height(16.dp))
 
             if (selectedMedication != null) {
-                Text("Active Substance: ${selectedMedication!!.activeSubstance}")
-                Text("Form: ${selectedMedication!!.form}")
-                Text("Type of Prescription: ${selectedMedication!!.typeOfPrescription}")
-                Text("Amount of Substance: ${selectedMedication!!.amountOfSubstance}")
+                MedicationInfoCard(selectedMedication!!)
             }
-
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
@@ -402,20 +401,26 @@ fun PrescribeScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Prescribe Medication") },
-                modifier = Modifier.padding(top = 16.dp),
-                navigationIcon = {
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.85f))
+    ){
+        Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+            Text(
+                text = "Prescribe Medication",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 8.dp)
             )
-        }
-    ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues)) {
+
+
+
             doctorId.value?.let { id ->
                 if (fromCalendar && patientId != null) {
                     // Load medical record ID if not provided
@@ -447,7 +452,7 @@ fun PrescribeScreen(
                     PrescribeScreenForm(doctorId = id, medicalRecordId = medicalRecordId ?: "")
                 }
             } ?: run {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                CircularProgressIndicator()
             }
         }
     }
@@ -469,6 +474,27 @@ fun PrescribeScreen(
     }
 }
 
+@Composable
+fun MedicationInfoCard(drug: Drug) {
+    Card(
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            DrugInfoItem(label = "Name", value = drug.name)
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            DrugInfoItem(label = "Active Substance", value = drug.activeSubstance)
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            DrugInfoItem(label = "Form", value = drug.form)
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            DrugInfoItem(label = "Type of Prescription", value = drug.typeOfPrescription)
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            DrugInfoItem(label = "Amount of Substance", value = drug.amountOfSubstance)
+        }
+    }
+}
 
 private fun addPrescription(
     drug: Drug,
@@ -544,10 +570,7 @@ fun PrescribeScreenWithGivenPatient(
             Spacer(modifier = Modifier.height(16.dp))
 
             if (selectedMedication != null) {
-                Text("Active Substance: ${selectedMedication!!.activeSubstance}")
-                Text("Form: ${selectedMedication!!.form}")
-                Text("Type of Prescription: ${selectedMedication!!.typeOfPrescription}")
-                Text("Amount of Substance: ${selectedMedication!!.amountOfSubstance}")
+                MedicationInfoCard(selectedMedication!!)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -636,5 +659,13 @@ fun PrescribeScreenWithGivenPatient(
             },
             onDismiss = { showMedicationDialog = false }
         )
+    }
+}
+
+@Composable
+fun DrugInfoItem(label: String, value: String) {
+    Column {
+        Text(text = label, style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+        Text(text = value, style = MaterialTheme.typography.bodyLarge)
     }
 }
