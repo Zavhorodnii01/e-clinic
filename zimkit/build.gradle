@@ -2,6 +2,21 @@ plugins {
     id 'com.android.library'
 }
 
+Properties localProperties = new Properties();
+File localPropsFile = new File(rootProject.getProjectDir(), "local.properties");
+
+if (localPropsFile.exists()) {
+    try (FileInputStream fis = new FileInputStream(localPropsFile)) {
+        localProperties.load(fis);
+    } catch (IOException e) {
+        e.printStackTrace(); // Or handle the error appropriately
+    }
+}
+
+String appID = localProperties.getProperty("APP_ID");
+String appSign = localProperties.getProperty("APP_SIGN");
+String apiKey = localProperties.getProperty("GEMINI_API_KEY");
+
 android {
     compileSdkVersion 33
 
@@ -10,10 +25,18 @@ android {
         targetSdkVersion 33
         versionCode 1
         versionName "1.0"
+
+
+        buildConfigField("String", "APP_ID", "\"$appID\"")
+        buildConfigField("String", "APP_SIGN", "\"$appSign\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"$apiKey\"")
     }
+
+
 
     buildFeatures {
         dataBinding true
+        buildConfig true
     }
 
     buildTypes {
@@ -44,6 +67,8 @@ dependencies {
 
     implementation 'it.sephiroth.android.library.imagezoom:library:1.0.4'
     implementation 'com.squareup.picasso:picasso:2.8'
+    implementation libs.firebase.common
+    //implementation project(':app')
     annotationProcessor 'com.github.bumptech.glide:compiler:4.12.0'
     implementation 'com.davemorrissey.labs:subsampling-scale-image-view-androidx:3.10.0'
     implementation 'com.github.chrisbanes:PhotoView:2.0.0'

@@ -4,10 +4,10 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.gms.google-services") // Na końcu, jak zaleca Google
+    id("com.google.gms.google-services")
 }
 
-// Wczytaj dane z local.properties
+
 val localProperties = Properties().apply {
     val localPropsFile = rootProject.file("local.properties")
     if (localPropsFile.exists()) {

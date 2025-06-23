@@ -27,6 +27,7 @@ biometricKtx = "1.1.0"
 securityCryptoKtx = "1.0.0"
 firebaseMessagingKtx = "24.1.1"
 ui = "1.8.3"
+firebaseCommon = "21.0.0"
 
 [libraries]
 accompanist-zoom = { module = "com.google.accompanist:accompanist-zoom", version.ref = "accompanistZoom" }
@@ -62,6 +63,7 @@ androidx-biometric-ktx = { group = "androidx.biometric", name = "biometric-ktx",
 androidx-security-crypto-ktx = { group = "androidx.security", name = "security-crypto-ktx", version.ref = "securityCryptoKtx" }
 firebase-messaging-ktx = { group = "com.google.firebase", name = "firebase-messaging-ktx", version.ref = "firebaseMessagingKtx" }
 ui = { module = "androidx.compose.ui:ui", version.ref = "ui" }
+firebase-common = { group = "com.google.firebase", name = "firebase-common", version.ref = "firebaseCommon" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -64,6 +64,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.e_clinic.UI.theme.EClinicTheme
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
+import com.example.e_clinic.BuildConfig
 import com.example.e_clinic.ZEGOCloud.launchZegoChat
 //import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.ServiceListItem
 import com.example.e_clinic.UI.activities.user_screens.UserLogInActivity
@@ -225,13 +226,12 @@ fun MainScreen() {
 
     ZegoUIKitPrebuiltCallService.init(
         application,
-        951562290L,
-        "f94c807ab100d261b21dd7dfb8e7fef479ff64946fd73e07001c373080bc8986",
+        BuildConfig.APP_ID.toLong(),
+        BuildConfig.APP_SIGN,
         userID,  // Actual user ID
         userName, // Actual user name
         createCallConfig() // Same config as before
     )
-
 }
 
 

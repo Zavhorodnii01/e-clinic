@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.e_clinic.BuildConfig
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Appointment
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.MedicalRecord
 import com.example.e_clinic.Firebase.Repositories.AppointmentRepository
@@ -183,8 +184,8 @@ fun MainScreen() {
 
     ZegoUIKitPrebuiltCallService.init(
         application,
-        951562290L,
-        "f94c807ab100d261b21dd7dfb8e7fef479ff64946fd73e07001c373080bc8986",
+        BuildConfig.APP_ID.toLong(),
+        BuildConfig.APP_SIGN,
         userID,  // Actual user ID
         doctorName, // Actual user name
         createCallConfig() // Same config as before
