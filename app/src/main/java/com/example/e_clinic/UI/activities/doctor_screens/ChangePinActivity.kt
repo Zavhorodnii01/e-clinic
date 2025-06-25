@@ -1,7 +1,7 @@
 package com.example.e_clinic.UI.activities.doctor_screens
 
+import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -13,19 +13,28 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.DoctorActivity
 import com.example.e_clinic.Services.PinManager
 
 class ChangeDoctorPinActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            ChangeDoctorPinScreen()
+            ChangeDoctorPinScreen(
+                onPinChanged = {
+                    val intent = Intent(this, DoctorActivity::class.java)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(intent)
+                    finish()
+                }
+
+            )
         }
     }
 }
 
 @Composable
-fun ChangeDoctorPinScreen() {
+fun ChangeDoctorPinScreen(onPinChanged: () -> Unit) {
     val context = LocalContext.current
     val pinManager = PinManager(context)
 
@@ -73,7 +82,7 @@ fun ChangeDoctorPinScreen() {
                 } else {
                     pinManager.savePin(newPin)
                     message = "PIN changed successfully"
-                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    onPinChanged()
                 }
             },
             modifier = Modifier.fillMaxWidth()

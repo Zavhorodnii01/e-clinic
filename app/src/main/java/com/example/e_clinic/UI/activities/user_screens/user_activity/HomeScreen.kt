@@ -554,11 +554,11 @@ fun CalendarWidget(allAppointments: List<Appointment>) {
                                     Text("Date: ${selectedDate.value}")
                                     if (selectedDoctor != null) {
                                         Text("Doctor: Dr. ${selectedDoctor!!.name} ${selectedDoctor!!.surname}")
-                                        Text("Specialization: ${selectedDoctor!!.specialization}")
+                                        Text("Specialization: ${formatEnumString(selectedDoctor!!.specialization)}")
                                     } else {
                                         Text("Loading doctor info...")
                                     }
-                                    Text("Status: ${appointment.status}")
+                                    Text("Status: ${formatEnumString(appointment.status)}")
 
                                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -646,7 +646,7 @@ fun NextAppointmentItem(appointment: Appointment) {
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    text = it.specialization,
+                    text = formatEnumString(it.specialization).uppercase(),
                     style = MaterialTheme.typography.bodySmall
                 )
             } ?: Text(
@@ -668,3 +668,8 @@ fun NextAppointmentItem(appointment: Appointment) {
         }
     }
 }
+
+fun formatEnumString(enumString: String): String =
+    enumString.lowercase()
+        .split('_')
+        .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }

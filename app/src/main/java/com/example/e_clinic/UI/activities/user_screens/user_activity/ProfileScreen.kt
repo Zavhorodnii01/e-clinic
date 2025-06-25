@@ -3,7 +3,6 @@ package com.example.e_clinic.UI.activities.user_screens.user_activity
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -21,20 +20,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.User
 import com.example.e_clinic.Firebase.Repositories.UserRepository
 import com.example.e_clinic.Firebase.Storage.uploadProfilePicture
-import com.example.e_clinic.UI.activities.doctor_screens.ChangeDoctorPinActivity
+import com.example.e_clinic.UI.activities.LogInActivity
 import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.PasswordUpdateScreen
 import com.example.e_clinic.UI.activities.user_screens.ChangePinActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.yalantis.ucrop.UCrop
 import java.io.File
+import kotlin.printStackTrace
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,21 +54,23 @@ fun ProfileScreen() {
     val cropLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        val resultUri = UCrop.getOutput(result.data!!)
-        resultUri?.let {
-            uploadProfilePicture(context as Activity, userId, it) { downloadUrl ->
-                // Update user profile picture in Firestore, by adding a new field
-                FirebaseFirestore.getInstance()
-                    .collection("users")
-                    .document(userId)
-                    .update("profilePicture", downloadUrl)
-                    .addOnSuccessListener {
-                        user = user?.copy(profilePicture = downloadUrl)
-                    }
-
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val resultUri = UCrop.getOutput(result.data!!)
+            resultUri?.let {
+                uploadProfilePicture(context as Activity, userId, it) { downloadUrl ->
+                    FirebaseFirestore.getInstance()
+                        .collection("users")
+                        .document(userId)
+                        .update("profilePicture", downloadUrl)
+                        .addOnSuccessListener {
+                            user = user?.copy(profilePicture = downloadUrl)
+                        }
                 }
             }
         }
+        if (result.resultCode == UCrop.RESULT_ERROR) return@rememberLauncherForActivityResult
+
+    }
 
 
     // Pick image launcher
@@ -231,7 +236,7 @@ fun SecurityOptions() {
             Button(
                 onClick = {
                     FirebaseAuth.getInstance().signOut()
-                    val intent = Intent(context, com.example.e_clinic.UI.activities.user_screens.UserLogInActivity::class.java)
+                    val intent = Intent(context, LogInActivity::class.java)
                     context.startActivity(intent)
                     (context as? Activity)?.finish()
                 },
@@ -247,7 +252,7 @@ fun SecurityOptions() {
             PasswordUpdateScreen()
         }
         if(showPINDialog){
-            val intent = Intent(context, ChangePinActivity::class.java)
+            val intent = Intent(context, ChangePinActivity()::class.java)
             context.startActivity(intent)
             showPINDialog = false
         }

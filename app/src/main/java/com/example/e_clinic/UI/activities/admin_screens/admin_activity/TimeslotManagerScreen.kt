@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Doctor
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.TimeSlot
+import com.example.e_clinic.Firebase.FirestoreDatabase.collections.specializations.DoctorSpecialization
 import com.example.e_clinic.Firebase.Repositories.TimeSlotRepository
 import com.google.firebase.Timestamp
 import java.time.*
@@ -45,6 +46,7 @@ fun TimeslotManagerScreen(selectedDoctor: Doctor) {
     var generatedSlots by remember { mutableStateOf(listOf<LocalDateTime>()) }
     var hour by remember { mutableStateOf(9) }
     var minute by remember { mutableStateOf(0) }
+
 
 
     Column(  Modifier
@@ -129,7 +131,9 @@ fun TimeslotManagerScreen(selectedDoctor: Doctor) {
                 title = { Text("Timeslots Generated") },
                 text = { Text("Generated ${generatedSlots.size} slots") },
                 confirmButton = {
-                    Button(onClick = { }) {
+                    Button(onClick = {
+                        generatedSlots = listOf()
+                    }) {
                         Text("OK")
                     }
                 }

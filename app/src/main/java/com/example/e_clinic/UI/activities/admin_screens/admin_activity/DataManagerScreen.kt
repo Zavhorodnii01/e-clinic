@@ -184,7 +184,7 @@ fun DataManagerScreen(id: String, type: String){
             }
         }
         if (type == "doctor") {
-            val specializationOptions = DoctorSpecialization.values()
+            val specializationOptions = DoctorSpecialization.entries.toTypedArray()
             var specializationExpanded by remember { mutableStateOf(false) }
             val selectedSpecialization = specializationOptions.find { it.displayName == specialization }
                 ?: DoctorSpecialization.CARDIOLOGY
@@ -252,7 +252,7 @@ fun DataManagerScreen(id: String, type: String){
                     "phone" to phone,
                     "e-mail" to email,
                     "address" to address,
-                    "specialization" to specialization.uppercase(),
+                    "specialization" to (DoctorSpecialization.fromDisplayName(specialization)?.name ?: specialization),
                     "experience" to experience,
                     "education" to education
                 )

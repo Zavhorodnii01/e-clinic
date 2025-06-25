@@ -1,6 +1,7 @@
 package com.example.e_clinic.UI.activities.doctor_screens.doctor_activity
 
 import android.app.Activity
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,8 +32,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import com.example.e_clinic.Firebase.Storage.uploadProfilePicture
 import com.example.e_clinic.UI.activities.doctor_screens.ChangeDoctorPinActivity
-import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.PasswordUpdateScreen
-import com.example.e_clinic.UI.activities.user_screens.ChangePinScreen
+import com.example.e_clinic.UI.activities.LogInActivity
+import com.example.e_clinic.UI.activities.user_screens.user_activity.formatEnumString
 import com.google.firebase.firestore.FirebaseFirestore
 import java.io.File
 
@@ -42,6 +43,7 @@ import java.io.File
 fun DoctorProfileScreen() {
     val context = LocalContext.current
     val doctorId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    val email = FirebaseAuth.getInstance().currentUser?.email ?: ""
     var doctor by remember { mutableStateOf<Doctor?>(null) }
     var showPasswordDialog by remember { mutableStateOf(false) }
     var showPinDialog by remember { mutableStateOf(false) }
@@ -57,18 +59,22 @@ fun DoctorProfileScreen() {
     val cropLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        val resultUri = UCrop.getOutput(result.data!!)
-        resultUri?.let {
-            uploadProfilePicture(context as Activity, doctorId, it) { downloadUrl ->
-                FirebaseFirestore.getInstance()
-                    .collection("doctors")
-                    .document(doctorId)
-                    .update("profilePicture", downloadUrl)
-                    .addOnSuccessListener {
-                        doctor = doctor?.copy(profilePicture = downloadUrl)
-                    }
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val resultUri = UCrop.getOutput(result.data!!)
+            resultUri?.let {
+                uploadProfilePicture(context as Activity, doctorId, it) { downloadUrl ->
+                    FirebaseFirestore.getInstance()
+                        .collection("doctors")
+                        .document(doctorId)
+                        .update("profilePicture", downloadUrl)
+                        .addOnSuccessListener {
+                            doctor = doctor?.copy(profilePicture = downloadUrl)
+                        }
+                }
             }
         }
+        if (result.resultCode == UCrop.RESULT_ERROR) return@rememberLauncherForActivityResult
+
     }
 
     // Pick image launcher
@@ -146,11 +152,11 @@ fun DoctorProfileScreen() {
                 Column(modifier = Modifier.padding(16.dp)) {
                     ProfileInfoItem(Icons.Default.Home, "Address", doctor?.address ?: "Loading...")
                     Divider(modifier = Modifier.padding(vertical = 8.dp))
-                    ProfileInfoItem(Icons.Default.Email, "Email", doctor?.email ?: "Loading...")
+                    ProfileInfoItem(Icons.Default.Email, "Email", email)
                     Divider(modifier = Modifier.padding(vertical = 8.dp))
                     ProfileInfoItem(Icons.Default.Phone, "Phone", doctor?.phone ?: "Loading...")
                     Divider(modifier = Modifier.padding(vertical = 8.dp))
-                    ProfileInfoItem(Icons.Filled.Work, "Specialization", doctor?.specialization ?: "Loading...")
+                    ProfileInfoItem(Icons.Filled.Work, "Specialization", formatEnumString(doctor?.specialization ?: "Loading...").uppercase())
                     Divider(modifier = Modifier.padding(vertical = 8.dp))
                     ProfileInfoItem(Icons.Filled.School, "Education", doctor?.education ?: "Loading...")
                     Divider(modifier = Modifier.padding(vertical = 8.dp))
@@ -187,7 +193,7 @@ fun DoctorProfileScreen() {
                     Button(
                         onClick = {
                             FirebaseAuth.getInstance().signOut()
-                            val intent = android.content.Intent(context, com.example.e_clinic.UI.activities.doctor_screens.DoctorLogInActivity::class.java)
+                            val intent = android.content.Intent(context, LogInActivity::class.java)
                             context.startActivity(intent)
                             (context as? Activity)?.finish()
                         },
@@ -205,12 +211,10 @@ fun DoctorProfileScreen() {
                 PasswordUpdateScreen()
             }
             if(showPinDialog){
-                val intent = android.content.Intent(context, ChangeDoctorPinActivity::class.java)
+                val intent = Intent(context, ChangeDoctorPinActivity::class.java)
                 context.startActivity(intent)
                 showPinDialog = false
             }
-
-
 
     }
 

@@ -1,4 +1,4 @@
-package com.example.e_clinic.UI.activities.user_screens
+package com.example.e_clinic.UI.activities
 
 import android.app.Activity
 import android.app.PendingIntent
@@ -8,22 +8,11 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,25 +27,29 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_clinic.R
 import com.example.e_clinic.Services.PinManager
-import com.example.e_clinic.UI.activities.doctor_screens.DoctorLogInActivity
+import com.example.e_clinic.UI.activities.admin_screens.AdminPinEntryActivity
+import com.example.e_clinic.UI.activities.admin_screens.SetAdminPinAfterLoginActivity
 import com.example.e_clinic.UI.activities.doctor_screens.DoctorPinEntryActivity
-import com.example.e_clinic.UI.activities.doctor_screens.ResetPasswordScreen
+import com.example.e_clinic.UI.activities.doctor_screens.SetDoctorPinAfterLoginActivity
+import com.example.e_clinic.UI.activities.user_screens.PinEntryActivity
+import com.example.e_clinic.UI.activities.user_screens.SetPinAfterLoginActivity
 import com.example.e_clinic.UI.theme.EClinicTheme
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 
 
-class UserLogInActivity : ComponentActivity() {
+class LogInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             EClinicTheme {
                 LogInScreen(
                     onSignUpClick = {
-                        startActivity(Intent(this, UserSignUpActivity::class.java))
+                        startActivity(Intent(this, SignUpActivity::class.java))
                         finish()
                     }
                 )
@@ -101,7 +94,7 @@ fun LogInScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "eClinic Patient",
+                        text = "eClinic",
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
@@ -122,7 +115,7 @@ fun LogInScreen(
                     Button(
                         onClick = {
                             auth.signOut()
-                            context.startActivity(Intent(context, UserLogInActivity::class.java))
+                            context.startActivity(Intent(context, LogInActivity::class.java))
                             (context as? ComponentActivity)?.finish()
                         },
                         modifier = Modifier
@@ -155,7 +148,7 @@ fun LogInScreen(
             rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
                 if (result.resultCode == Activity.RESULT_OK) {
                     val credential = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-                    val account = credential.result
+                    val account = credential.getResult(ApiException::class.java)
                     val authCredential = GoogleAuthProvider.getCredential(account.idToken, null)
 
                     auth.signInWithCredential(authCredential)
@@ -221,7 +214,7 @@ fun LogInScreen(
 
 
                         Text(
-                            text = "Log in to eClinic Patient",
+                            text = "Log in to eClinic",
                             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                             modifier = Modifier.padding(bottom = 24.dp)
                         )
@@ -282,35 +275,82 @@ fun LogInScreen(
                                 errorMessage = null
                                 auth.signInWithEmailAndPassword(email, password)
                                     .addOnCompleteListener { task ->
+                                        isLoading = false
                                         if (task.isSuccessful) {
-                                            val user = task.result.user
-                                            if (user != null && user.isEmailVerified) {
-                                                FirebaseFirestore.getInstance()
-                                                    .collection("users")
-                                                    .document(user.uid)
+                                            val user = auth.currentUser
+                                            if (user != null) {
+                                                val userEmail = user.email ?: ""
+                                                val db = FirebaseFirestore.getInstance()
+                                                val pinManager = PinManager(context)
+
+                                                // Check administrators by email
+                                                db.collection("administrators")
+                                                    .whereEqualTo("email", userEmail)
                                                     .get()
-                                                    .addOnSuccessListener { doc ->
-                                                        val intent =
-                                                            if (pinManager.getPin() != null) {
-                                                                Intent(
-                                                                    context,
-                                                                    PinEntryActivity::class.java
-                                                                )
+                                                    .addOnSuccessListener { adminDocs ->
+                                                        if (!adminDocs.isEmpty) {
+                                                            val intent = if (pinManager.getPin() != null) {
+                                                                Intent(context, AdminPinEntryActivity::class.java)
                                                             } else {
-                                                                Intent(
-                                                                    context,
-                                                                    SetPinAfterLoginActivity::class.java
-                                                                )
+                                                                Intent(context, SetAdminPinAfterLoginActivity::class.java)
                                                             }
-                                                        context.startActivity(intent)
+                                                            context.startActivity(intent)
+                                                            (context as? Activity)?.finish()
+                                                        } else {
+                                                            // Check doctors by email (try both "e-mail" and "email")
+                                                            db.collection("doctors")
+                                                                .whereEqualTo("e-mail", userEmail)
+                                                                .get()
+                                                                .addOnSuccessListener { doctorDocs ->
+                                                                    if (!doctorDocs.isEmpty) {
+                                                                        val intent = if (pinManager.getPin() != null) {
+                                                                            Intent(context, DoctorPinEntryActivity::class.java)
+                                                                        } else {
+                                                                            Intent(context, SetDoctorPinAfterLoginActivity::class.java)
+                                                                        }
+                                                                        context.startActivity(intent)
+                                                                        (context as? Activity)?.finish()
+                                                                    } else {
+                                                                        // Try "email" field if "e-mail" not found
+                                                                        db.collection("doctors")
+                                                                            .whereEqualTo("email", userEmail)
+                                                                            .get()
+                                                                            .addOnSuccessListener { doctorDocs2 ->
+                                                                                if (!doctorDocs2.isEmpty) {
+                                                                                    val intent = if (pinManager.getPin() != null) {
+                                                                                        Intent(context, DoctorPinEntryActivity::class.java)
+                                                                                    } else {
+                                                                                        Intent(context, SetDoctorPinAfterLoginActivity::class.java)
+                                                                                    }
+                                                                                    context.startActivity(intent)
+                                                                                    (context as? Activity)?.finish()
+                                                                                } else {
+                                                                                    // Default: User/Patient
+                                                                                    val intent = if (pinManager.getPin() != null) {
+                                                                                        Intent(context, PinEntryActivity::class.java)
+                                                                                    } else {
+                                                                                        Intent(context, SetPinAfterLoginActivity::class.java)
+                                                                                    }
+                                                                                    context.startActivity(intent)
+                                                                                    (context as? Activity)?.finish()
+                                                                                }
+                                                                            }
+                                                                            .addOnFailureListener {
+                                                                                errorMessage = "Failed to check roles"
+                                                                            }
+                                                                    }
+                                                                }
+                                                                .addOnFailureListener {
+                                                                    errorMessage = "Failed to check roles"
+                                                                }
+                                                        }
                                                     }
                                                     .addOnFailureListener {
-                                                        errorMessage = "Failed to fetch user data"
+                                                        errorMessage = "Failed to check roles"
                                                     }
                                             } else {
                                                 auth.signOut()
-                                                errorMessage =
-                                                    "Email is not verified. Please check your inbox."
+                                                errorMessage = "Email is not verified. Please check your inbox."
                                             }
                                         } else {
                                             errorMessage = "Incorrect email or password"
@@ -380,9 +420,7 @@ fun LogInScreen(
                                     context, 0, signInIntent,
                                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
                                 )
-                                launcher.launch(
-                                    IntentSenderRequest.Builder(pendingIntent.intentSender).build()
-                                )
+                                launcher.launch(IntentSenderRequest.Builder(pendingIntent.intentSender).build())
                             },
                             modifier = Modifier.size(200.dp)
                         ) {
@@ -407,10 +445,49 @@ fun LogInScreen(
                 )
             }
             if (showPinEntry) {
-                val intent = Intent(context, PinEntryActivity::class.java)
-                context.startActivity(intent)
-                (context as? ComponentActivity)?.finish()
-                return
+                val auth = FirebaseAuth.getInstance()
+                val currentUser = auth.currentUser
+                val db = FirebaseFirestore.getInstance()
+                val pinManager = PinManager(context)
+
+                if (currentUser != null) {
+                    val email = currentUser.email ?: ""
+
+                    // Check admin by UID or email
+                    db.collection("administrators").whereEqualTo("email", email).get()
+                        .addOnSuccessListener { adminDocs ->
+                            if (!adminDocs.isEmpty) {
+                                val intent = Intent(context, AdminPinEntryActivity::class.java)
+                                context.startActivity(intent)
+                                (context as? ComponentActivity)?.finish()
+                            } else {
+                                // Check doctor by email (try both "e-mail" and "email")
+                                db.collection("doctors").whereEqualTo("e-mail", email).get()
+                                    .addOnSuccessListener { doctorDocs ->
+                                        if (!doctorDocs.isEmpty) {
+                                            val intent = Intent(context, DoctorPinEntryActivity::class.java)
+                                            context.startActivity(intent)
+                                            (context as? ComponentActivity)?.finish()
+                                        } else {
+                                            db.collection("doctors").whereEqualTo("email", email).get()
+                                                .addOnSuccessListener { doctorDocs2 ->
+                                                    if (!doctorDocs2.isEmpty) {
+                                                        val intent = Intent(context, DoctorPinEntryActivity::class.java)
+                                                        context.startActivity(intent)
+                                                        (context as? ComponentActivity)?.finish()
+                                                    } else {
+                                                        // Default: User/Patient
+                                                        val intent = Intent(context, PinEntryActivity::class.java)
+                                                        context.startActivity(intent)
+                                                        (context as? ComponentActivity)?.finish()
+                                                    }
+                                                }
+                                        }
+                                    }
+                            }
+                        }
+                    return
+                }
 
         }
 

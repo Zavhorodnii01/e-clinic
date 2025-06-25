@@ -78,7 +78,7 @@
         <activity android:name=".UI.activities.admin_screens.AdminPinEntryActivity" />
 
         <activity
-            android:name=".UI.activities.user_screens.UserLogInActivity"
+            android:name=".UI.activities.LogInActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.EClinic">
@@ -91,31 +91,29 @@
         <activity android:name=".UI.activities.admin_screens.SetAdminPinAfterLoginActivity" />
 
         <activity
-            android:name=".UI.activities.user_screens.UserSignUpActivity"
+            android:name=".UI.activities.SignUpActivity"
             android:exported="true" />
         <activity
             android:name=".UI.activities.admin_screens.admin_activity.AdminActivity"
             android:exported="true" />
+        <activity android:name=".UI.activities.doctor_screens.ChangeDoctorPinActivity" />
+        <activity android:name=".UI.activities.admin_screens.ChangePinActivity" />
+
         <activity
             android:name=".UI.activities.doctor_screens.doctor_activity.DoctorActivity"
             android:exported="true" />
-        <activity android:name=".UI.activities.admin_screens.AdminLogInActivity"
-            android:exported="true">
+
 <!--            <intent-filter>-->
 <!--                <action android:name="android.intent.action.MAIN" />-->
 <!--                <category android:name="android.intent.category.LAUNCHER" />-->
 <!--            </intent-filter>-->
-        </activity>
+
+
         <activity
             android:name=".UI.activities.user_screens.user_activity.UserActivity"
             android:exported="true" />
-        <activity
-            android:name=".UI.activities.doctor_screens.DoctorLogInActivity"
-            android:exported="true" />
 
-        <activity
-            android:name=".UI.activities.user_screens.PrescriptionListActivity" />
-        <activity
+    <activity
             android:name=".UI.activities.user_screens.SetPinAfterLoginActivity"
             android:exported="true" />
         <activity
