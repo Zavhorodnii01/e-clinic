@@ -15,4 +15,8 @@ enum class DoctorSpecialization(val displayName: String) {
     ENDOCRINOLOGY("Endocrinology"),
     GASTROENTEROLOGY("Gastroenterology"),
     ONCOLOGY("Oncology");
+    companion object {
+        fun fromDisplayName(displayName: String): DoctorSpecialization? =
+            entries.find { it.displayName == displayName }
+    }
 }

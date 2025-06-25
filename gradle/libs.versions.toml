@@ -1,6 +1,7 @@
 [versions]
 accompanistZoom = "<latest-version>"
 agp = "8.7.3"
+androidImageCropper = "4.6.0"
 biometric = "1.2.0"
 kotlin = "2.0.0"
 coreKtx = "1.15.0"
@@ -31,6 +32,7 @@ firebaseCommon = "21.0.0"
 
 [libraries]
 accompanist-zoom = { module = "com.google.accompanist:accompanist-zoom", version.ref = "accompanistZoom" }
+android-image-cropper = { module = "com.canhub.cropper:android-image-cropper", version.ref = "androidImageCropper" }
 androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

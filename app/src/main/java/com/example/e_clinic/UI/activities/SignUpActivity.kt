@@ -1,4 +1,4 @@
-package com.example.e_clinic.UI.activities.user_screens
+package com.example.e_clinic.UI.activities
 
 import android.app.Activity
 import android.app.DatePickerDialog
@@ -8,11 +8,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -41,13 +39,13 @@ import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.*
 
-class UserSignUpActivity : ComponentActivity() {
+class SignUpActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             EClinicTheme {
                 RegistrationScreen(onSignUpSuccess = {
-                    startActivity(Intent(this, UserLogInActivity::class.java))
+                    startActivity(Intent(this, LogInActivity::class.java))
                     finish()
                 })
             }

@@ -17,19 +17,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_clinic.Services.PinManager
+import com.example.e_clinic.UI.theme.EClinicTheme
 
 class SetPinAfterLoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            SetPinAfterLoginScreen()
+            EClinicTheme {
+                SetPinAfterLoginScreen()
+            }
         }
     }
 }
-
 @Composable
 fun SetPinAfterLoginScreen() {
     val context = LocalContext.current
@@ -44,10 +48,9 @@ fun SetPinAfterLoginScreen() {
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
-
         Text(
             text = if (step == 1) "Set your PIN" else "Confirm your PIN",
             fontSize = 22.sp
@@ -56,7 +59,7 @@ fun SetPinAfterLoginScreen() {
         Spacer(modifier = Modifier.height(32.dp))
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             for (i in 1..4) {
@@ -64,7 +67,7 @@ fun SetPinAfterLoginScreen() {
                 val filled = i <= currentPin.length
                 Box(
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(28.dp)
                         .clip(CircleShape)
                         .background(if (filled) MaterialTheme.colorScheme.primary else Color.LightGray)
                 )
@@ -74,14 +77,17 @@ fun SetPinAfterLoginScreen() {
         Spacer(modifier = Modifier.height(48.dp))
 
         Column(
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             for (row in 0 until 3) {
-                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(32.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     for (col in 1..3) {
                         val number = (row * 3 + col).toString()
-                        NumberButtonSet(number) {
+                        NumberButtonSet(number, size = 80.dp) {
                             if (step == 1 && pin.length < 4) {
                                 pin += number
                                 if (pin.length == 4) step = 2
@@ -105,12 +111,12 @@ fun SetPinAfterLoginScreen() {
             }
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(24.dp),
+                horizontalArrangement = Arrangement.spacedBy(32.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(modifier = Modifier.size(64.dp))
+                Spacer(modifier = Modifier.size(80.dp))
 
-                NumberButtonSet("0") {
+                NumberButtonSet("0", size = 80.dp) {
                     if (step == 1 && pin.length < 4) {
                         pin += "0"
                         if (pin.length == 4) step = 2
@@ -132,19 +138,22 @@ fun SetPinAfterLoginScreen() {
 
                 Box(
                     modifier = Modifier
-                        .size(64.dp)
+                        .size(80.dp)
+                        .clip(CircleShape)
                         .clickable {
                             if (step == 1 && pin.isNotEmpty()) {
                                 pin = pin.dropLast(1)
                             } else if (step == 2 && confirmPin.isNotEmpty()) {
                                 confirmPin = confirmPin.dropLast(1)
                             }
-                        },
+                        }
+                        .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "⌫",
-                        fontSize = 24.sp
+                        fontSize = 28.sp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }
@@ -159,23 +168,5 @@ fun SetPinAfterLoginScreen() {
                 modifier = Modifier.padding(bottom = 8.dp)
             )
         }
-    }
-}
-
-@Composable
-fun NumberButtonSet(number: String, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(64.dp)
-            .clip(CircleShape)
-            .clickable(onClick = onClick)
-            .background(MaterialTheme.colorScheme.primaryContainer),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = number,
-            fontSize = 24.sp,
-            color = MaterialTheme.colorScheme.onPrimaryContainer
-        )
     }
 }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -97,13 +98,16 @@ fun UpdateUserDataScreen(onFinish: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.85f))
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.85f)),
+        contentAlignment = Alignment.Center
     ) {
         Column(
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+            modifier = Modifier
+                .fillMaxWidth()
                 .padding(16.dp)
+                .widthIn(max = 400.dp) // Limit max width for centering
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "Edit Your Data",

@@ -23,7 +23,6 @@ import androidx.navigation.compose.*
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Doctor
 import com.example.e_clinic.ZEGOCloud.launchZegoChat
 import com.example.e_clinic.Services.Service
-import com.example.e_clinic.UI.activities.doctor_screens.DoctorLogInActivity
 import com.example.e_clinic.UI.theme.EClinicTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore

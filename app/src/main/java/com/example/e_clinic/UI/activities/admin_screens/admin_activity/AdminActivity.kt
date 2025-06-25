@@ -99,7 +99,7 @@ fun MainScreen() {
     }
 
     Scaffold(
-        containerColor = Color.Transparent,
+        
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("eClinic Management", fontWeight = FontWeight.Bold, fontSize = 22.sp, modifier = Modifier.padding(start = 8.dp)) },

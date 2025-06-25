@@ -5,8 +5,6 @@ package com.example.e_clinic.UI.activities.admin_screens.admin_activity
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
-import androidx.compose.ui.layout.ContentScale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -33,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Administrator
 import com.example.e_clinic.Firebase.Storage.uploadProfilePicture
-import com.example.e_clinic.UI.activities.admin_screens.AdminLogInActivity
+import com.example.e_clinic.UI.activities.LogInActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.io.File
@@ -44,19 +42,27 @@ fun ProfileScreen(admin: Administrator, navController: NavController, onProfileP
     val context = LocalContext.current
     var profilePicUri by remember { mutableStateOf<Uri?>(null) }
     var showPasswordDialog by remember { mutableStateOf(false) }
+
+
     val cropLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        val resultUri = UCrop.getOutput(result.data!!)
-        resultUri?.let {
-            uploadProfilePicture(context as Activity, admin.id, it) { downloadUrl ->
-                FirebaseFirestore.getInstance()
-                    .collection("administrators")
-                    .document(admin.id)
-                    .update("profilePicture", downloadUrl)
-                    .addOnSuccessListener { onProfilePictureChanged() }
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val resultUri = UCrop.getOutput(result.data!!)
+            resultUri?.let {
+                uploadProfilePicture(context as Activity, admin.id, it) { downloadUrl ->
+                    FirebaseFirestore.getInstance()
+                        .collection("administrators")
+                        .document(admin.id)
+                        .update("profilePicture", downloadUrl)
+                        .addOnSuccessListener {
+                            onProfilePictureChanged()
+                        }
+                }
             }
         }
+        if (result.resultCode == UCrop.RESULT_ERROR) return@rememberLauncherForActivityResult
+
     }
 
     val pickLauncher = rememberLauncherForActivityResult(
@@ -160,7 +166,7 @@ fun ProfileScreen(admin: Administrator, navController: NavController, onProfileP
                         onClick = {
                             FirebaseAuth.getInstance().signOut()
                             //Toast.makeText(context, "Logged out", Toast.LENGTH_SHORT).show()
-                            val intent = Intent(context, AdminLogInActivity::class.java)
+                            val intent = Intent(context, LogInActivity::class.java)
                             context.startActivity(intent)
                             (context as? Activity)?.finish()
                         },

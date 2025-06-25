@@ -1,5 +1,6 @@
 package com.example.e_clinic.UI.activities.admin_screens
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -14,18 +15,26 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.e_clinic.Services.PinManager
+import com.example.e_clinic.UI.activities.admin_screens.admin_activity.AdminActivity
 
 class ChangePinActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            ChangePinScreen()
+            ChangePinScreen(
+                onPinChanged = {
+                   val intent = Intent(this, AdminActivity::class.java)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(intent)
+                    finish()
+                }
+            )
         }
     }
 }
 
 @Composable
-fun ChangePinScreen() {
+fun ChangePinScreen(onPinChanged: () -> Unit) {
     val context = LocalContext.current
     val pinManager = PinManager(context)
 
@@ -73,7 +82,7 @@ fun ChangePinScreen() {
                 } else {
                     pinManager.savePin(newPin)
                     message = "PIN changed successfully"
-                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    onPinChanged()
                 }
             },
             modifier = Modifier.fillMaxWidth()

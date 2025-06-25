@@ -74,7 +74,7 @@ fun AppointmentBookingForm(
     var isLoading by remember { mutableStateOf(false) }
 
     var selectedType by rememberSaveable { mutableStateOf<String?>(null) }
-    val types = listOf("online", "in_clinic")
+    val types = listOf("ONLINE", "IN_CLINIC")
     var typeDropdownExpanded by rememberSaveable { mutableStateOf(false) }
 
     // Load specializations
@@ -216,7 +216,7 @@ fun AppointmentBookingForm(
             ) {
                 types.forEach { type ->
                     DropdownMenuItem(
-                        text = { Text(type) },
+                        text = { Text(formatEnumString(type)) },
                         onClick = {
                             selectedType = type
                             typeDropdownExpanded = false
@@ -863,7 +863,7 @@ fun MedicalRecordsList(
                         doctor?.specialization?.let { specialization ->
                             if (specialization.isNotEmpty()) {
                                 Text(
-                                    text = "Specialization: $specialization",
+                                    text = "Specialization: ${formatEnumString(specialization).uppercase()}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -1009,12 +1009,12 @@ fun AppointmentList(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                text = "Status: ${appointment.status}",
+                                text = "Status: ${formatEnumString(appointment.status)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = if (appointment.status == "CANCELED") Color.Red else Color.Unspecified
                             )
                             Text(
-                                text = "Type: ${appointment.type.replace('_', ' ').replaceFirstChar { it.uppercase() }}",
+                                text = "Type: ${formatEnumString(appointment.type)}",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -1150,3 +1150,4 @@ fun cancelAppointment(
         }
         .addOnFailureListener { e -> onFailure(e.message ?: "Unknown error") }
 }
+

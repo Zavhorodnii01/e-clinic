@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -38,12 +39,18 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.example.e_clinic.Services.PinManager
 import com.example.e_clinic.UI.activities.admin_screens.admin_activity.AdminActivity
+import com.example.e_clinic.UI.activities.LogInActivity
+import com.example.e_clinic.UI.activities.user_screens.NumberButtonSet
+import com.example.e_clinic.UI.theme.EClinicTheme
+import kotlin.collections.plusAssign
+import kotlin.compareTo
 
 
 class AdminPinEntryActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            EClinicTheme {
             AdminPinEntryScreen(
                 onPinVerified = {
                     startActivity(Intent(this, AdminActivity::class.java))
@@ -54,6 +61,7 @@ class AdminPinEntryActivity : FragmentActivity() {
                     finish()
                 }
             )
+        }
         }
     }
 }
@@ -85,173 +93,149 @@ fun AdminPinEntryScreen(
         }
     }
 
-    if (!showPinScreen){
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-            contentAlignment = Alignment.Center
-        ) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentAlignment = Alignment.Center
+    ) {
+        if (!showPinScreen) {
             CircularProgressIndicator()
-        }
-    }
-
-    else{
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(40.dp))
-
-            Text(
-                text = "Welcome back!",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Enter PIN code",
-                fontSize = 18.sp
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                for (i in 1..4) {
-                    val filled = i <= pin.length
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(if (filled) MaterialTheme.colorScheme.primary else Color.LightGray)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(48.dp))
-
+        } else {
             Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
             ) {
-                for (row in 0 until 3) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(24.dp)
-                    ) {
-                        for (col in 1..3) {
-                            val number = (row * 3 + col).toString()
-                            AdminNumberButtonSet(number) {
-                                if (pin.length < 4) {
-                                    pin += number
-                                    error = null
-                                    if (pin.length == 4) {
-                                        if (pinManager.validatePin(pin)) {
-                                            onPinVerified()
-                                        } else {
-                                            error = "Incorrect PIN"
-                                            pin = ""
+                Text(
+                    text = "Welcome back!",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "Enter PIN code",
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.height(32.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    for (i in 1..4) {
+                        val filled = i <= pin.length
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(if (filled) MaterialTheme.colorScheme.primary else Color.LightGray)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(48.dp))
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    for (row in 0 until 3) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(32.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            for (col in 1..3) {
+                                val number = (row * 3 + col).toString()
+                                NumberButtonSet(
+                                    number = number,
+                                    size = 80.dp
+                                ) {
+                                    if (pin.length < 4) {
+                                        pin += number
+                                        error = null
+                                        if (pin.length == 4) {
+                                            if (pinManager.validatePin(pin)) {
+                                                onPinVerified()
+                                            } else {
+                                                error = "Incorrect PIN"
+                                                pin = ""
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                }
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Spacer(modifier = Modifier.size(64.dp))
-
-                    AdminNumberButtonSet("0") {
-                        if (pin.length < 4) {
-                            pin += "0"
-                            error = null
-                            if (pin.length == 4) {
-                                if (pinManager.validatePin(pin)) {
-                                    onPinVerified()
-                                } else {
-                                    error = "Incorrect PIN"
-                                    pin = ""
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(32.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Spacer(modifier = Modifier.size(80.dp))
+                        NumberButtonSet(
+                            number = "0",
+                            size = 80.dp
+                        ) {
+                            if (pin.length < 4) {
+                                pin += "0"
+                                error = null
+                                if (pin.length == 4) {
+                                    if (pinManager.validatePin(pin)) {
+                                        onPinVerified()
+                                    } else {
+                                        error = "Incorrect PIN"
+                                        pin = ""
+                                    }
                                 }
                             }
                         }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clickable {
-                                if (pin.isNotEmpty()) {
-                                    pin = pin.dropLast(1)
-                                    error = null
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    if (pin.isNotEmpty()) {
+                                        pin = pin.dropLast(1)
+                                        error = null
+                                    }
                                 }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "⌫",
-                            fontSize = 24.sp
-                        )
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "⌫",
+                                fontSize = 28.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
                     }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            error?.let {
+                Spacer(modifier = Modifier.height(32.dp))
+                error?.let {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
                 Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    text = "Forgot PIN code?",
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clickable { forgotPassword = true }
+                        .padding(16.dp)
                 )
             }
-
-            Text(
-                text = "Forgot PIN code?",
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .clickable {
-                        forgotPassword = true
-                    }
-                    .padding(16.dp)
-            )
         }
     }
-    if (forgotPassword) {
+     if (forgotPassword) {
         LaunchedEffect(Unit) {
             val pinManager = PinManager(context)
             pinManager.clearPin() // Clear the current password
-            context.startActivity(Intent(context, AdminLogInActivity::class.java))
-        }
+            context.startActivity(Intent(context, LogInActivity::class.java))
     }
-}
-
-@Composable
-fun NumberButton(number: String, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(64.dp)
-            .clip(CircleShape)
-            .clickable(onClick = onClick)
-            .background(MaterialTheme.colorScheme.primaryContainer),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = number,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onPrimaryContainer
-        )
-    }
+     }
 }
 
 

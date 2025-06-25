@@ -134,7 +134,7 @@ fun NewDoctorScreen(onDoctorAdded: () -> Unit = {}) {
                 expanded = specializationExpanded,
                 onDismissRequest = { specializationExpanded = false }
             ) {
-                DoctorSpecialization.values().forEach { option ->
+                DoctorSpecialization.entries.forEach { option ->
                     DropdownMenuItem(
                         text = { Text(option.displayName) },
                         onClick = {
@@ -218,7 +218,7 @@ fun NewDoctorScreen(onDoctorAdded: () -> Unit = {}) {
                             "gender" to gender,
                             "phone" to phone,
                             "e-mail" to email,
-                            "specialization" to specialization.uppercase(),
+                            "specialization" to (DoctorSpecialization.fromDisplayName(specialization)?.name ?: specialization),
                             "address" to address,
                             "experience" to experience,
                             "education" to education
