@@ -22,3 +22,5 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
     // DO NOT include com.google.gms.google-services here
 }
+
+

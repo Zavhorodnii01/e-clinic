@@ -105,6 +105,8 @@ class DoctorActivity : ComponentActivity() {
         }
     }
 
+
+
     private fun checkIntent(intent: Intent?) {
         intent?.getStringExtra("appointmentId")?.let { id ->
             urgentAppointmentId.value = id

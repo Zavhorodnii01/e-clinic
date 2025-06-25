@@ -90,12 +90,23 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
 
     // Firebase
+
     implementation(platform("com.google.firebase:firebase-bom:33.15.0")) // najnowsza na 2025
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-storage-ktx")
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.zxing:core:3.5.1")
+
+    // Add the dependency for the Firebase SDK for Google Analytics
+    // When using the BoM, don't specify versions in Firebase dependencies
+
+    implementation ("com.google.firebase:firebase-messaging:23.2.1")
+    implementation ("im.zego:zpns-fcm:2.8.0")
+
+    // Use the latest version
+    implementation ("im.zego:zim:+")  // If using ZIMKit
+    // The ZPNs package for FCM
 
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:20.7.0")
