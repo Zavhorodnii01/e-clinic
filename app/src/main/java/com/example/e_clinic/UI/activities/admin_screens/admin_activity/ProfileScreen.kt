@@ -32,6 +32,7 @@ import androidx.navigation.NavController
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Administrator
 import com.example.e_clinic.Firebase.Storage.uploadProfilePicture
 import com.example.e_clinic.UI.activities.LogInActivity
+import com.example.e_clinic.UI.activities.PasswordUpdateDialog
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.io.File
@@ -181,8 +182,9 @@ fun ProfileScreen(admin: Administrator, navController: NavController, onProfileP
             }
         }
         if (showPasswordDialog) {
-            PasswordUpdateScreen(
-            )
+            PasswordUpdateDialog {
+                showPasswordDialog = false
+            }
         }
     }
 }

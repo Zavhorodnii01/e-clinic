@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -1017,35 +1018,40 @@ fun AppointmentList(
                                 text = "Type: ${formatEnumString(appointment.type)}",
                                 style = MaterialTheme.typography.bodySmall
                             )
+
+
+                if (appointment.status == "NOT_FINISHED") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = { onStartChat(appointment) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ChatBubble,
+                                contentDescription = "Start Chat",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                         }
 
-                        if (appointment.status == "NOT_FINISHED") {
-                            Row {
-                                if (showCancel) {
-                                    IconButton(
-                                        onClick = { onCancel(appointment) },
-                                        modifier = Modifier.size(36.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Clear,
-                                            contentDescription = "Cancel Appointment",
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
-                                    }
-                                }
-
-                                IconButton(
-                                    onClick = { onStartChat(appointment) },
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Phone,
-                                        contentDescription = "Start Chat",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
+                        Button(
+                            onClick = { onCancel(appointment) },
+                            modifier = Modifier
+                                .height(36.dp)
+                                .clip(RoundedCornerShape(24.dp)),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            )
+                        ) {
+                            Text("Cancel", style = MaterialTheme.typography.bodyLarge)
                         }
                     }
+                }
+                }
                 }
             }
         }

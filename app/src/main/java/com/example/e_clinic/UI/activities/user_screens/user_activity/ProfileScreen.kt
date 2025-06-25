@@ -20,24 +20,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
-import androidx.core.view.WindowCompat
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.User
 import com.example.e_clinic.Firebase.Repositories.UserRepository
 import com.example.e_clinic.Firebase.Storage.uploadProfilePicture
 import com.example.e_clinic.UI.activities.LogInActivity
-import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.PasswordUpdateScreen
+import com.example.e_clinic.UI.activities.PasswordUpdateDialog
 import com.example.e_clinic.UI.activities.user_screens.ChangePinActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.yalantis.ucrop.UCrop
 import java.io.File
-import kotlin.printStackTrace
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -249,7 +245,9 @@ fun SecurityOptions() {
             }
         }
         if (showPasswordDialog) {
-            PasswordUpdateScreen()
+            PasswordUpdateDialog(
+                onDismiss = { showPasswordDialog = false },
+            )
         }
         if(showPINDialog){
             val intent = Intent(context, ChangePinActivity()::class.java)

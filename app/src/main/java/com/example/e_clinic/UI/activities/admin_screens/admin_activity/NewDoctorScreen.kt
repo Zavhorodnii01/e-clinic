@@ -60,14 +60,15 @@ fun NewDoctorScreen(onDoctorAdded: () -> Unit = {}) {
     Column(
         Modifier
             .fillMaxSize()
-            .background(Color.White)
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Text(
             text = "Add New Doctor",
             style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = 16.dp),
+            color = MaterialTheme.colorScheme.onBackground,
         )
         TextField(
             value = name,

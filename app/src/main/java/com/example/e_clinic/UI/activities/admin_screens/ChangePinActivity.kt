@@ -16,19 +16,22 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.e_clinic.Services.PinManager
 import com.example.e_clinic.UI.activities.admin_screens.admin_activity.AdminActivity
+import com.example.e_clinic.UI.theme.EClinicTheme
 
 class ChangePinActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            EClinicTheme {
             ChangePinScreen(
                 onPinChanged = {
                    val intent = Intent(this, AdminActivity::class.java)
                     intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
                     startActivity(intent)
                     finish()
-                }
-            )
+                })
+            }
+
         }
     }
 }
@@ -48,7 +51,7 @@ fun ChangePinScreen(onPinChanged: () -> Unit) {
             .padding(32.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Change your PIN", style = MaterialTheme.typography.headlineMedium)
+        Text("Change your PIN", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedTextField(

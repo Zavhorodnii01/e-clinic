@@ -27,6 +27,7 @@ import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Prescription
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.User
 import com.example.e_clinic.Firebase.Repositories.AppointmentRepository
 import com.example.e_clinic.UI.activities.user_screens.user_activity.PrescriptionDialog
+import com.example.e_clinic.UI.activities.user_screens.user_activity.formatEnumString
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -754,7 +755,7 @@ fun AppointmentCard(
 
             Text(text = "Date: ${dateFormat.format(dateTime)}", style = MaterialTheme.typography.bodyMedium)
             Text(text = "Time: ${timeFormat.format(dateTime)}", style = MaterialTheme.typography.bodyMedium)
-            Text(text = "Status: ${appointment.status ?: "N/A"}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Text(text = "Status: ${formatEnumString(appointment.status) ?: "N/A"}", style = MaterialTheme.typography.bodyMedium)
             Text(
                 text = "Type: ${appointment.type.replace('_', ' ').replaceFirstChar { it.uppercase() }}",
                 style = MaterialTheme.typography.bodySmall

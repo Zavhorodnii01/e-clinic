@@ -98,7 +98,7 @@ fun UpdateUserDataScreen(onFinish: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.85f)),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -112,6 +112,7 @@ fun UpdateUserDataScreen(onFinish: () -> Unit) {
             Text(
                 text = "Edit Your Data",
                 style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
             TextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, modifier = Modifier.fillMaxWidth())

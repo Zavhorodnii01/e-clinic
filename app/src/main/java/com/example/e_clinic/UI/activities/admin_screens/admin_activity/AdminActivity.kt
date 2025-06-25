@@ -102,7 +102,8 @@ fun MainScreen() {
         
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("eClinic Management", fontWeight = FontWeight.Bold, fontSize = 22.sp, modifier = Modifier.padding(start = 8.dp)) },
+                title = { Text("eClinic Management", fontWeight = FontWeight.Bold, fontSize = 22.sp, modifier = Modifier.padding(start = 8.dp))
+                        },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigate("profile") }) {
                         if (admin?.profilePicture?.isNotEmpty() == true) {
@@ -126,15 +127,14 @@ fun MainScreen() {
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.Transparent,
+                    containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
         bottomBar = {
             Box(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.background)
+                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
             ) {
                 AdminBottomNavigationBar(navController)
             }
@@ -148,17 +148,15 @@ fun MainScreen() {
 fun AdminBottomNavigationBar(navController: NavController) {
     Box(
         modifier = Modifier
-            .padding(horizontal = 24.dp, vertical = 16.dp)
             .fillMaxWidth()
             .height(64.dp)
-            .shadow(20.dp, RoundedCornerShape(32.dp), clip = false)
-            .clip(RoundedCornerShape(32.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
-    ){
-        Row(
+            .shadow(16.dp, RoundedCornerShape(32.dp), clip = false) // Adjusted shadow elevation
+            .background(MaterialTheme.colorScheme.primary) // Slightly more opaque or adjust as needed
+    ) {
+        NavigationBar(
             modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp
         ) {
             NavigationBarItem(
                 icon = {
@@ -169,7 +167,8 @@ fun AdminBottomNavigationBar(navController: NavController) {
                 },
                 label = { Text("Doctors") },
                 selected = navController.currentDestination?.route == "doctors",
-                onClick = { navController.navigate("doctors") },
+                onClick = { if (navController.currentDestination?.route != "doctors")
+                    navController.navigate("doctors") },
                 alwaysShowLabel = true
             )
             NavigationBarItem(
@@ -181,7 +180,8 @@ fun AdminBottomNavigationBar(navController: NavController) {
                 },
                 label = { Text("Patients") },
                 selected = navController.currentDestination?.route == "patients",
-                onClick = { navController.navigate("patients") },
+                onClick = { if (navController.currentDestination?.route != "patients")
+                    navController.navigate("patients") },
                 alwaysShowLabel = true
             )
         }

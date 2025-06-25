@@ -1,4 +1,5 @@
-package com.example.e_clinic.UI.activities.admin_screens.admin_activity
+package com.example.e_clinic.UI.activities
+
 
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -11,6 +12,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 
@@ -28,11 +31,11 @@ fun PasswordUpdateScreen() {
         Modifier
             .fillMaxSize()
             .padding(16.dp)
-            .background(MaterialTheme.colorScheme.background)
     ) {
         Text(
             "Edit your password",
             style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 16.dp)
         )
         OutlinedTextField(
@@ -121,5 +124,23 @@ fun PasswordUpdateScreen() {
                 }
             }
         )
+    }
+}
+
+@Composable
+fun PasswordUpdateDialog(onDismiss: () -> Unit) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            color = MaterialTheme.colorScheme.background,
+            tonalElevation = 8.dp
+        ) {
+            PasswordUpdateScreen()
+        }
     }
 }

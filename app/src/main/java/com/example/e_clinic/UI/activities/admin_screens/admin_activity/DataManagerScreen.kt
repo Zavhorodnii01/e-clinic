@@ -104,20 +104,21 @@ fun DataManagerScreen(id: String, type: String){
 
     Column(Modifier
         .fillMaxSize()
-        .background(Color.White)
         .padding(16.dp)
         .verticalScroll(rememberScrollState())
+        .background(MaterialTheme.colorScheme.background)
     ) {
 
         Text(
             text = if (type == "user") "Edit User Details" else "Edit Doctor Details",
             style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = 16.dp),
+            color = MaterialTheme.colorScheme.onBackground
         )
         if (type == "user") {
-            Text("User ID: $id", style = MaterialTheme.typography.bodyMedium)
+            Text("User ID: $id", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground)
         } else if (type == "doctor") {
-            Text("Doctor ID: $id", style = MaterialTheme.typography.bodyMedium)
+            Text("Doctor ID: $id", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground)
         }
 
         TextField(value = name, onValueChange = { name = it }, label = { Text("Name") })

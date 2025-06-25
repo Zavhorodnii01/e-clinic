@@ -328,8 +328,7 @@ fun MainScreen() {
         },
         bottomBar = {
             Box(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.85f))
+                        modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
             ) {
                 BottomNavigationBar(navController)
             }
@@ -426,37 +425,39 @@ fun BottomNavigationBar(navController: NavHostController) {
     val context = LocalContext.current
     Box(
         modifier = Modifier
-            .padding(horizontal = 24.dp, vertical = 16.dp)
             .fillMaxWidth()
             .height(64.dp)
-            .shadow(20.dp, RoundedCornerShape(32.dp), clip = false)
-            .clip(RoundedCornerShape(32.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+            .shadow(16.dp, RoundedCornerShape(32.dp), clip = false) // Adjusted shadow elevation
+            .background(MaterialTheme.colorScheme.primary) // Slightly more opaque or adjust as needed
     ) {
-        Row(
+        NavigationBar(
             modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp
+        ){
             NavigationBarItem(
                 icon = { Icon(Icons.Default.Home, null) },
                 label = { Text("Home") },
                 selected = currentDestination == "home",
-                onClick = { navController.navigate("home") },
+                onClick = {
+                    if (currentDestination != "home")
+                    navController.navigate("home") },
                 alwaysShowLabel = true
             )
             NavigationBarItem(
                 icon = { Icon(Icons.Default.CalendarToday, null) },
                 label = { Text("Appointments") },
                 selected = currentDestination == "appointments",
-                onClick = { navController.navigate("appointments") },
+                onClick = { if (currentDestination != "appointments")
+                    navController.navigate("appointments") },
                 alwaysShowLabel = true
             )
             NavigationBarItem(
                 icon = { Icon(Icons.Default.Build, null) },
                 label = { Text("Services") },
                 selected = currentDestination == "services",
-                onClick = { navController.navigate("services") },
+                onClick = { if (currentDestination != "services")
+                    navController.navigate("services") },
                 alwaysShowLabel = true
             )
             NavigationBarItem(

@@ -12,11 +12,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,11 +33,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -153,20 +159,19 @@ fun MainScreen() {
 
     var userID : String = ""
     val user = FirebaseAuth.getInstance().currentUser
-    user?.let {
-        val userId = it.uid
-        userID = userId
-        val db = FirebaseFirestore.getInstance()
-        db.collection("users").document(userId).get()
-            .addOnSuccessListener { document ->
-                if (document != null) {
-                    userName = document.getString("name") ?: "Unknown User"
-                    profilePictureUrl = document.getString("profilePicture")
+    LaunchedEffect(user) {
+        user?.let {
+            val userId = it.uid
+            userID = userId
+            val db = FirebaseFirestore.getInstance()
+            db.collection("users").document(userId)
+                .addSnapshotListener { document, _ ->
+                    if (document != null && document.exists()) {
+                        userName = document.getString("name") ?: "Unknown User"
+                        profilePictureUrl = document.getString("profilePicture")
+                    }
                 }
-            }
-            .addOnFailureListener {
-                userName = "Unknown User"
-            }
+        }
     }
 
     Scaffold(
@@ -204,8 +209,7 @@ fun MainScreen() {
         },
         bottomBar = {
             Box(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.85f))
+                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
             ) {
                 BottomNavigationBar(navController = navController)
             }
@@ -290,37 +294,49 @@ fun BottomNavigationBar(navController: NavHostController) {
     val context = LocalContext.current
     Box(
         modifier = Modifier
-            .padding(horizontal = 24.dp, vertical = 16.dp)
             .fillMaxWidth()
             .height(64.dp)
-            .shadow(20.dp, RoundedCornerShape(32.dp), clip = false)
-            .clip(RoundedCornerShape(32.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+            .shadow(16.dp, RoundedCornerShape(32.dp), clip = false) // Adjusted shadow elevation
+            .background(MaterialTheme.colorScheme.primary) // Slightly more opaque or adjust as needed
     ) {
-        Row(
+        NavigationBar(
             modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp
+        ){
             NavigationBarItem(
                 icon = { Icon(Icons.Default.Home, null) },
                 label = { Text("Home") },
                 selected = currentDestination == "home",
-                onClick = { navController.navigate("home") },
+                onClick = {
+                    if (currentDestination != "home") {
+                        navController.navigate("home")
+                    }
+                },
                 alwaysShowLabel = true
             )
             NavigationBarItem(
                 icon = { Icon(Icons.Default.CalendarToday, null) },
                 label = { Text("Appointments") },
                 selected = currentDestination == "appointments",
-                onClick = { navController.navigate("appointments") },
+                onClick = {
+                    if (currentDestination != "appointments") {
+                        // Navigate to appointments screen
+
+                        navController.navigate("appointments")
+                    }
+                },
                 alwaysShowLabel = true
             )
             NavigationBarItem(
                 icon = { Icon(Icons.Default.Build, null) },
                 label = { Text("Services") },
                 selected = currentDestination == "services",
-                onClick = { navController.navigate("services") },
+                onClick = {
+                    if (currentDestination != "services") {
+                        navController.navigate("services")
+                    }
+                },
                 alwaysShowLabel = true
             )
 

@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Prescription
@@ -251,17 +252,19 @@ fun generateQRCode(link: String): Bitmap? {
 
 @Composable
 fun FullScreenImageDialog(imageUrl: String, onDismiss: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-            .clickable { onDismiss() },
-        contentAlignment = Alignment.Center
-    ) {
-        Image(
-            painter = rememberAsyncImagePainter(imageUrl),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize()
-        )
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .fillMaxHeight(0.8f)
+                .background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = rememberAsyncImagePainter(imageUrl),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     }
 }

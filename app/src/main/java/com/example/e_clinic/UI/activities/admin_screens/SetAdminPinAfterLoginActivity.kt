@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.e_clinic.Services.PinManager
 import com.example.e_clinic.UI.activities.user_screens.NumberButtonSet
+import com.example.e_clinic.UI.theme.EClinicTheme
 import kotlin.collections.plusAssign
 import kotlin.compareTo
 
@@ -41,7 +42,9 @@ class SetAdminPinAfterLoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            EClinicTheme {
             SetAdminPinAfterLoginScreen()
+            }
         }
     }
 }
@@ -65,7 +68,8 @@ fun SetAdminPinAfterLoginScreen() {
     ) {
         Text(
             text = if (step == 1) "Set your PIN" else "Confirm your PIN",
-            fontSize = 22.sp
+            fontSize = 22.sp,
+            color = MaterialTheme.colorScheme.onBackground,
         )
 
         Spacer(modifier = Modifier.height(32.dp))

@@ -51,7 +51,7 @@ fun TimeslotManagerScreen(selectedDoctor: Doctor) {
 
     Column(  Modifier
         .fillMaxSize()
-        .background(Color.White)
+        .background(MaterialTheme.colorScheme.background)
         .padding(16.dp)) {
         Text("Doctor: ${selectedDoctor.name} ${selectedDoctor.surname}", style = MaterialTheme.typography.titleMedium)
         Text("Specialization: ${selectedDoctor.specialization}", style = MaterialTheme.typography.titleMedium)
@@ -79,7 +79,7 @@ fun TimeslotManagerScreen(selectedDoctor: Doctor) {
             }
         }
         Spacer(Modifier.height(16.dp))
-        Text("Select Working Hours:", style = MaterialTheme.typography.titleLarge)
+        Text("Select Working Hours:", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("From: ${startHour}")
             Spacer(Modifier.width(8.dp))

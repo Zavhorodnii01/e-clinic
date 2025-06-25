@@ -51,7 +51,7 @@ fun ChangePinScreen(onPinChanged: () -> Unit) {
             .padding(32.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Change your PIN", style = MaterialTheme.typography.headlineMedium)
+        Text("Change your PIN", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedTextField(

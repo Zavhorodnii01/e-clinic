@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.example.e_clinic.Firebase.Storage.uploadProfilePicture
 import com.example.e_clinic.UI.activities.doctor_screens.ChangeDoctorPinActivity
 import com.example.e_clinic.UI.activities.LogInActivity
+import com.example.e_clinic.UI.activities.PasswordUpdateDialog
 import com.example.e_clinic.UI.activities.user_screens.user_activity.formatEnumString
 import com.google.firebase.firestore.FirebaseFirestore
 import java.io.File
@@ -208,7 +209,9 @@ fun DoctorProfileScreen() {
             }
         }
             if (showPasswordDialog) {
-                PasswordUpdateScreen()
+                PasswordUpdateDialog {
+                    showPasswordDialog = false
+                }
             }
             if(showPinDialog){
                 val intent = Intent(context, ChangeDoctorPinActivity::class.java)

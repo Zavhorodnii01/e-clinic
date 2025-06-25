@@ -54,7 +54,8 @@ fun SetDoctorPinAfterLoginScreen() {
     ) {
         Text(
             text = if (step == 1) "Set your PIN" else "Confirm your PIN",
-            fontSize = 22.sp
+            fontSize = 22.sp,
+            color = MaterialTheme.colorScheme.onBackground,
         )
 
         Spacer(modifier = Modifier.height(32.dp))
