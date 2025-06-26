@@ -1,6 +1,14 @@
 package com.zegocloud.zimkit.components.message.utils.notification;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.os.Build;
 import android.text.TextUtils;
+import android.util.Log;
+
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
+
 import com.zegocloud.uikit.plugin.signaling.ZegoSignalingPlugin;
 import com.zegocloud.zimkit.R;
 import com.zegocloud.zimkit.common.utils.ZIMKitActivityUtils;
@@ -58,7 +66,13 @@ public class ZIMKitNotificationsManager {
     private final ZIMKitDelegate eventCallBack = new ZIMKitDelegate() {
         @Override
         public void onMessageReceived(String conversationID, ZIMConversationType type,
-            ArrayList<ZIMKitMessage> messages) {
+                                      ArrayList<ZIMKitMessage> messages) {
+
+            //String senderName = m;
+            //Log.d("name2", "name2: " + senderName);
+
+
+
             ZIMKitConversation conversation = ZIMKitCore.getInstance().getZIMKitConversation(conversationID);
             if (conversation != null) {
                 ZIMConversation zimConversation = conversation.getZimConversation();
@@ -75,146 +89,178 @@ public class ZIMKitNotificationsManager {
                 }
                 handlerMessageList(zimMessages);
             }
+
+            String senderName = conversation.getName();
+            String messageContent = messages.get(0).textContent.content;
+
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(ZIMKitCore.getInstance().getApplication(), "chat_channel")
+                    .setSmallIcon(R.drawable.ic_notification)
+                    .setContentTitle("E-Clinics")
+                    .setContentText(senderName + " : " + messageContent)
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setAutoCancel(true);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel channel = new NotificationChannel(
+                        "chat_channel", "Chat Notifications", NotificationManager.IMPORTANCE_HIGH);
+                channel.setDescription("Notifications for chat messages");
+
+                NotificationManager manager = ZIMKitCore.getInstance().getApplication().getSystemService(NotificationManager.class);
+                manager.createNotificationChannel(channel);
+            }
+
+            NotificationManagerCompat.from(ZIMKitCore.getInstance().getApplication()).notify(123, builder.build());
+
+
+
+
         }
     };
 
-    private void handlerMessageList(ArrayList<ZIMMessage> messageList) {
-        //The app does not notify in the foreground
-        boolean isForeground = !ZIMKitActivityUtils.isBackground();
-        if (isForeground) {
-            return;
-        }
-        for (ZIMMessage zimMessage : messageList) {
-            if (zimMessage.getDirection() == ZIMMessageDirection.RECEIVE) {
-                integratingMessageData(zimMessage);
+
+
+        private void handlerMessageList(ArrayList<ZIMMessage> messageList) {
+            //The app does not notify in the foreground
+            boolean isForeground = !ZIMKitActivityUtils.isBackground();
+            if (isForeground) {
+                return;
+            }
+            for (ZIMMessage zimMessage : messageList) {
+                if (zimMessage.getDirection() == ZIMMessageDirection.RECEIVE) {
+                    integratingMessageData(zimMessage);
+                }
             }
         }
-    }
 
-    private void integratingMessageData(ZIMMessage zimMessage) {
-        ZIMKitConversation conversation = ZIMKitCore.getInstance()
-            .getZIMKitConversation(zimMessage.getConversationID());
-        if (conversation == null) {
-            return;
-        }
-        if (conversation.getType() == ZIMConversationType.PEER) {
-            if (zimMessage.getType() == ZIMMessageType.REVOKE) {
-                if (Objects.equals(zimMessage.getSenderUserID(), ZIMKitCore.getInstance().getLocalUser().getId())) {
-                    String operatorName = ZIMKitCore.getInstance().getApplication().getString(R.string.zimkit_you);
-                    noticeContent(zimMessage, operatorName + " ");
+        private void integratingMessageData(ZIMMessage zimMessage) {
+            ZIMKitConversation conversation = ZIMKitCore.getInstance()
+                    .getZIMKitConversation(zimMessage.getConversationID());
+            if (conversation == null) {
+                return;
+            }
+            if (conversation.getType() == ZIMConversationType.PEER) {
+                if (zimMessage.getType() == ZIMMessageType.REVOKE) {
+                    if (Objects.equals(zimMessage.getSenderUserID(), ZIMKitCore.getInstance().getLocalUser().getId())) {
+                        String operatorName = ZIMKitCore.getInstance().getApplication().getString(R.string.zimkit_you);
+                        noticeContent(zimMessage, operatorName + " ");
+                    } else {
+                        ZegoSignalingPlugin.getInstance()
+                                .queryUserInfo(Collections.singletonList(zimMessage.getSenderUserID()),
+                                        new ZIMUsersInfoQueryConfig(), new ZIMUsersInfoQueriedCallback() {
+                                            @Override
+                                            public void onUsersInfoQueried(ArrayList<ZIMUserFullInfo> userList,
+                                                                           ArrayList<ZIMErrorUserInfo> errorUserList, ZIMError errorInfo) {
+                                                ZIMErrorUserInfo userInfo = errorUserList.get(0);
+                                                Log.d("userInfo", userInfo.toString());
+                                                if (errorInfo.code == ZIMErrorCode.SUCCESS) {
+                                                    String operatorName;
+                                                    ZIMUserFullInfo memoryUserInfo = ZIMKitCore.getInstance()
+                                                            .getMemoryUserInfo(zimMessage.getSenderUserID());
+                                                    if (memoryUserInfo == null) {
+                                                        operatorName = zimMessage.getSenderUserID();
+                                                    } else {
+                                                        operatorName = memoryUserInfo.baseInfo.userName;
+                                                    }
+                                                    noticeContent(zimMessage, operatorName + " ");
+                                                    //Log.d("operatorName", operatorName);
+                                                }
+                                            }
+                                        });
+
+                    }
                 } else {
-                    ZegoSignalingPlugin.getInstance()
-                        .queryUserInfo(Collections.singletonList(zimMessage.getSenderUserID()),
-                            new ZIMUsersInfoQueryConfig(), new ZIMUsersInfoQueriedCallback() {
+                    noticeContent(zimMessage, "");
+                }
+            } else {
+                List<ZIMKitGroupMemberInfo> groupMemberList = ZIMKitCore.getInstance()
+                        .getGroupMemberList(conversation.getId());
+                if (groupMemberList == null || groupMemberList.isEmpty()) {
+                    ZIMKitCore.getInstance().queryGroupMemberInfo(zimMessage.getSenderUserID(), conversation.getId(),
+                            new QueryGroupMemberInfoCallback() {
                                 @Override
-                                public void onUsersInfoQueried(ArrayList<ZIMUserFullInfo> userList,
-                                    ArrayList<ZIMErrorUserInfo> errorUserList, ZIMError errorInfo) {
-                                    if (errorInfo.code == ZIMErrorCode.SUCCESS) {
-                                        String operatorName;
-                                        ZIMUserFullInfo memoryUserInfo = ZIMKitCore.getInstance()
-                                            .getMemoryUserInfo(zimMessage.getSenderUserID());
-                                        if (memoryUserInfo == null) {
-                                            operatorName = zimMessage.getSenderUserID();
-                                        } else {
-                                            operatorName = memoryUserInfo.baseInfo.userName;
-                                        }
-                                        noticeContent(zimMessage, operatorName + " ");
+                                public void onQueryGroupMemberInfo(ZIMKitGroupMemberInfo member, ZIMError error) {
+                                    String operatorName;
+                                    if (TextUtils.isEmpty(member.getNickName())) {
+                                        operatorName = member.getName();
+                                    } else {
+                                        operatorName = member.getNickName();
                                     }
+                                    if (zimMessage.getType() == ZIMMessageType.TEXT
+                                            || zimMessage.getType() == ZIMMessageType.IMAGE
+                                            || zimMessage.getType() == ZIMMessageType.AUDIO
+                                            || zimMessage.getType() == ZIMMessageType.VIDEO
+                                            || zimMessage.getType() == ZIMMessageType.FILE
+                                            || zimMessage.getType() == ZIMMessageType.COMBINE) {
+                                        operatorName = operatorName + ":";
+                                    } else if (zimMessage.getType() == ZIMMessageType.TIPS
+                                            || zimMessage.getType() == ZIMMessageType.CUSTOM) {
+                                        operatorName = "";
+                                    } else if (zimMessage.getType() == ZIMMessageType.REVOKE) {
+                                    }
+                                    noticeContent(zimMessage, operatorName);
                                 }
                             });
-
-                }
-            } else {
-                noticeContent(zimMessage, "");
-            }
-        } else {
-            List<ZIMKitGroupMemberInfo> groupMemberList = ZIMKitCore.getInstance()
-                .getGroupMemberList(conversation.getId());
-            if (groupMemberList == null || groupMemberList.isEmpty()) {
-                ZIMKitCore.getInstance().queryGroupMemberInfo(zimMessage.getSenderUserID(), conversation.getId(),
-                    new QueryGroupMemberInfoCallback() {
-                        @Override
-                        public void onQueryGroupMemberInfo(ZIMKitGroupMemberInfo member, ZIMError error) {
-                            String operatorName;
-                            if (TextUtils.isEmpty(member.getNickName())) {
-                                operatorName = member.getName();
+                } else {
+                    String operatorName = "";
+                    for (ZIMKitGroupMemberInfo groupMemberInfo : groupMemberList) {
+                        if (zimMessage.getSenderUserID().equals(groupMemberInfo.getId())) {
+                            if (TextUtils.isEmpty(groupMemberInfo.getNickName())) {
+                                operatorName = groupMemberInfo.getName();
                             } else {
-                                operatorName = member.getNickName();
+                                operatorName = groupMemberInfo.getNickName();
                             }
-                            if (zimMessage.getType() == ZIMMessageType.TEXT
-                                || zimMessage.getType() == ZIMMessageType.IMAGE
-                                || zimMessage.getType() == ZIMMessageType.AUDIO
-                                || zimMessage.getType() == ZIMMessageType.VIDEO
-                                || zimMessage.getType() == ZIMMessageType.FILE
-                                || zimMessage.getType() == ZIMMessageType.COMBINE) {
-                                operatorName = operatorName + ":";
-                            } else if (zimMessage.getType() == ZIMMessageType.TIPS
-                                || zimMessage.getType() == ZIMMessageType.CUSTOM) {
-                                operatorName = "";
-                            } else if (zimMessage.getType() == ZIMMessageType.REVOKE) {
-                            }
-                            noticeContent(zimMessage, operatorName);
+                            break;
                         }
-                    });
-            } else {
-                String operatorName = "";
-                for (ZIMKitGroupMemberInfo groupMemberInfo : groupMemberList) {
-                    if (zimMessage.getSenderUserID().equals(groupMemberInfo.getId())) {
-                        if (TextUtils.isEmpty(groupMemberInfo.getNickName())) {
-                            operatorName = groupMemberInfo.getName();
-                        } else {
-                            operatorName = groupMemberInfo.getNickName();
-                        }
-                        break;
                     }
+                    if (TextUtils.isEmpty(operatorName)) {
+                        operatorName = zimMessage.getSenderUserID();
+                    }
+                    if (zimMessage.getType() == ZIMMessageType.TEXT || zimMessage.getType() == ZIMMessageType.IMAGE
+                            || zimMessage.getType() == ZIMMessageType.AUDIO || zimMessage.getType() == ZIMMessageType.VIDEO
+                            || zimMessage.getType() == ZIMMessageType.FILE || zimMessage.getType() == ZIMMessageType.COMBINE) {
+                        operatorName = operatorName + ":";
+                    } else if (zimMessage.getType() == ZIMMessageType.CUSTOM
+                            || zimMessage.getType() == ZIMMessageType.TIPS) {
+                        operatorName = operatorName + " ";
+                    } else if (zimMessage.getType() == ZIMMessageType.REVOKE) {
+                    }
+                    noticeContent(zimMessage, operatorName);
                 }
-                if (TextUtils.isEmpty(operatorName)) {
-                    operatorName = zimMessage.getSenderUserID();
-                }
-                if (zimMessage.getType() == ZIMMessageType.TEXT || zimMessage.getType() == ZIMMessageType.IMAGE
-                    || zimMessage.getType() == ZIMMessageType.AUDIO || zimMessage.getType() == ZIMMessageType.VIDEO
-                    || zimMessage.getType() == ZIMMessageType.FILE || zimMessage.getType() == ZIMMessageType.COMBINE) {
-                    operatorName = operatorName + ":";
-                } else if (zimMessage.getType() == ZIMMessageType.CUSTOM
-                    || zimMessage.getType() == ZIMMessageType.TIPS) {
-                    operatorName = operatorName + " ";
-                } else if (zimMessage.getType() == ZIMMessageType.REVOKE) {
-                }
-                noticeContent(zimMessage, operatorName);
             }
         }
-    }
 
-    private void noticeContent(ZIMMessage zimMessage, String prefix) {
-        String messageContent;
-        String content = ZIMMessageUtil.simplifyZIMMessageContent(zimMessage);
-        if (!TextUtils.isEmpty(content)) {
-            messageContent = prefix + content;
-        } else {
-            messageContent = ZIMKitCore.getInstance().getApplication().getString(R.string.zimkit_message_unknown);
+        private void noticeContent(ZIMMessage zimMessage, String prefix) {
+            String messageContent;
+            String content = ZIMMessageUtil.simplifyZIMMessageContent(zimMessage);
+            if (!TextUtils.isEmpty(content)) {
+                messageContent = prefix + content;
+            } else {
+                messageContent = ZIMKitCore.getInstance().getApplication().getString(R.string.zimkit_message_unknown);
+            }
+
+            messageNotification(zimMessage.getConversationType().value(), zimMessage.getConversationID(), messageContent,
+                    zimMessage.getSenderUserID());
         }
 
-        messageNotification(zimMessage.getConversationType().value(), zimMessage.getConversationID(), messageContent,
-            zimMessage.getSenderUserID());
-    }
+        private void messageNotification(int conversationType, String conversationID, String message, String senderUserID) {
+            NotificationsUtils.NotifyConfig notifyConfig = new NotificationsUtils.NotifyConfig();
+            notifyConfig.conversationType = conversationType;
+            notifyConfig.conversationID = conversationID;
+            notifyConfig.conversationName = "";
+            notifyConfig.message = message;
+            notifyConfig.senderUserID = senderUserID;
+            NotificationsUtils.showNotification(notifyConfig);
+        }
 
-    private void messageNotification(int conversationType, String conversationID, String message, String senderUserID) {
-        NotificationsUtils.NotifyConfig notifyConfig = new NotificationsUtils.NotifyConfig();
-        notifyConfig.conversationType = conversationType;
-        notifyConfig.conversationID = conversationID;
-        notifyConfig.conversationName = "";
-        notifyConfig.message = message;
-        notifyConfig.senderUserID = senderUserID;
-        NotificationsUtils.showNotification(notifyConfig);
-    }
+        public boolean isOpenNotification() {
+            return isOpenNotification;
+        }
 
-    public boolean isOpenNotification() {
-        return isOpenNotification;
-    }
+        public void onNotificationCleared() {
+            isOpenNotification = false;
+            ZIMKit.unRegisterZIMKitDelegate(eventCallBack);
+        }
 
-    public void onNotificationCleared() {
-        isOpenNotification = false;
-        ZIMKit.unRegisterZIMKitDelegate(eventCallBack);
-    }
 
 }
+

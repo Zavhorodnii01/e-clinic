@@ -746,7 +746,7 @@ fun PrescriptionDialog(
     onDismiss: () -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
-    val doctorName = remember { mutableStateOf("Loading...") }
+    val doctorName = remember { mutableStateOf("") }
     var imageUrl by remember { mutableStateOf("") }
     var showQRCodeDialog by remember { mutableStateOf(false) }
 

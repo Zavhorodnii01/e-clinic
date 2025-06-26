@@ -1,4 +1,4 @@
-package com.example.e_clinic.Firebase.CloudFunctions
+package com.example.e_clinic.Firebase.CloudMessaging
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -11,8 +11,6 @@ import com.example.e_clinic.R
 import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.DoctorActivity
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import com.zegocloud.zimkit.services.ZIMKit
-import im.zego.zim.entity.ZIMPushConfig
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 

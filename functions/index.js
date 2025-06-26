@@ -228,3 +228,48 @@ exports.sendUserAppointmentReminders = onSchedule(
     }
   }
 );
+
+
+// 🔔 Function 4: Remove all old timeslots
+exports.cleanupOldTimeSlots = onSchedule(
+  {
+    //schedule: 'every day 01:00', // Run once daily
+    schedule: 'every 2 minutes', // Run once daily
+    timeZone: 'Europe/Warsaw',
+    maxInstances: 1,
+  },
+  async () => {
+    try {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0); // Midnight today
+      const todayTimestamp = Timestamp.fromDate(now);
+
+      const snapshot = await db.collection('timeslots').get();
+      if (snapshot.empty) {
+        logger.log('No timeslots found');
+        return;
+      }
+
+      const cleanupPromises = snapshot.docs.map(async (doc) => {
+        const data = doc.data();
+        const currentSlots = data.available_slots || [];
+
+        // Filter out old slots
+        const futureSlots = currentSlots.filter(ts => ts.toMillis() >= todayTimestamp.toMillis());
+
+        if (futureSlots.length === 0) {
+          // All slots are old, delete the document
+          await doc.ref.delete();
+          logger.log(`Deleted timeslot document ${doc.id} (doctor_id: ${data.doctor_id})`);
+        } else {
+          logger.log(`Kept document ${doc.id} — has ${futureSlots.length} future slots`);
+        }
+      });
+
+      await Promise.all(cleanupPromises);
+      logger.log(' Finished cleaning up old timeslot documents');
+    } catch (error) {
+      logger.error(' Error cleaning timeslots:', error);
+    }
+  }
+);
