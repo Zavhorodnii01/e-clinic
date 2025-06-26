@@ -161,6 +161,8 @@ fun MainScreen() {
 
     var userID : String = ""
     val user = FirebaseAuth.getInstance().currentUser
+
+
     LaunchedEffect(user) {
         user?.let {
             val userId = it.uid
@@ -233,7 +235,7 @@ fun MainScreen() {
         createCallConfig() // Same config as before
     )
 
-    ZIMKit.connectUser(userID, userName, ""){}
+    ZIMKit.connectUser(userID, userName,profilePictureUrl){}
 }
 
 

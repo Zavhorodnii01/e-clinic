@@ -49,6 +49,7 @@ import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Prescription
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
 import com.zegocloud.zimkit.services.ZIMKit
+import kotlin.text.get
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -658,7 +659,14 @@ fun AppointmentsScreen(userId: String, onAppointmentMade: () -> Unit) {
                     doctorsCache = doctorsCache,
                     emptyMessage = "No upcoming appointments",
                     showCancel = true,
-                    onCancel = { appointment -> cancel(appointment) },
+                    onCancel = { appointment ->
+                        cancelAppointment(
+                            appointment,
+                            onSuccess = { Toast.makeText(context, "Appointment canceled", Toast.LENGTH_SHORT).show() },
+                            onFailure = { errorMsg ->  Toast.makeText(context, "Failed to cancel: $errorMsg", Toast.LENGTH_SHORT).show()
+                                Log.e("CancelAppointment", "Error: $errorMsg")}
+                        )
+                    },
                     onStartChat = { appointment -> openChatWithDoctor(appointment) }
                 )
                 1 -> MedicalRecordsList(
@@ -1130,7 +1138,9 @@ fun cancelAppointment(
             // TODO START OF TRANSACTION
             db.runTransaction { txn ->
                 /* ----- 2a. validate / update appointment  ----- */
-                val apptSnap   = txn.get(appointmentsRef)
+                val apptSnap = txn.get(appointmentsRef)
+                val slotSnap = txn.get(timeslotRef)
+
                 val status     = apptSnap.getString("status")
 
                 if (status == null || status == "CANCELED") {
@@ -1139,7 +1149,6 @@ fun cancelAppointment(
                 txn.update(appointmentsRef, "status", "CANCELED")
 
                 /* ----- 2b. return slot to available_slots ----- */
-                val slotSnap        = txn.get(timeslotRef)
                 val currentSlots    =
                     (slotSnap.get("available_slots") as? List<Timestamp>)?.toMutableList()
                         ?: mutableListOf()

@@ -188,12 +188,12 @@ private suspend fun generateSpecializationSuggestions(prompt: String): List<Stri
     return try {
         val model = GenerativeModel("gemini-1.5-flash", BuildConfig.GEMINI_API_KEY)
         model.generateContent(modelPrompt).text.orEmpty()
-            .replace(Regex("\\*\\*(.*?)\\*\\*"), "$1")
-            .replace(Regex("^\\*\\s+", RegexOption.MULTILINE), "")
-            .trim()
             .lineSequence()
+            .map { it.replace(Regex("^\\d+\\.\\s*|^-\\s*|\\*\\s*"), "").trim() }
             .filter { it.isNotBlank() }
             .toList()
+
+
     } catch (e: Exception) {
         listOf("Error: ${e.message}")
     }
