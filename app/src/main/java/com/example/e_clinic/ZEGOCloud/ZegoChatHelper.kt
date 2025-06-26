@@ -41,7 +41,8 @@ fun launchZegoChat(context: Context) {
                 val surname = doctorDoc.getString("surname") ?: ""
                 val userName = "$name $surname"
                 connectToZIMKit(context, userId, userName)
-                Log.d("UserProfile2",  userName)
+                //Log.d("UserProfile2",  userName)
+
             } else {
                 // Not found in either collection
                 Log.d("UserProfile", "User not found in 'users' or 'doctors'")

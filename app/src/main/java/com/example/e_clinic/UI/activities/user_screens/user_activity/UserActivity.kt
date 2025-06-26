@@ -75,6 +75,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallService
 import com.zegocloud.uikit.prebuilt.call.invite.ZegoUIKitPrebuiltCallInvitationConfig
 import com.zegocloud.uikit.prebuilt.call.invite.internal.ZegoTranslationText
+import com.zegocloud.zimkit.services.ZIMKit
 
 //import com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.ServiceListItem
 
@@ -154,6 +155,7 @@ private fun createCallConfig(): ZegoUIKitPrebuiltCallInvitationConfig {
 fun MainScreen() {
     val navController = rememberNavController()
     var userName by remember { mutableStateOf("") }
+    var userSurname by remember { mutableStateOf("") }
     var profilePictureUrl by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
 
@@ -168,6 +170,8 @@ fun MainScreen() {
                 .addSnapshotListener { document, _ ->
                     if (document != null && document.exists()) {
                         userName = document.getString("name") ?: "Unknown User"
+                        userSurname = document.getString("surname") ?: ""
+                        userName = userName + " " + userSurname
                         profilePictureUrl = document.getString("profilePicture")
                     }
                 }
@@ -228,7 +232,11 @@ fun MainScreen() {
         userName, // Actual user name
         createCallConfig() // Same config as before
     )
+
+    ZIMKit.connectUser(userID, userName, ""){}
 }
+
+
 
 
 @Composable

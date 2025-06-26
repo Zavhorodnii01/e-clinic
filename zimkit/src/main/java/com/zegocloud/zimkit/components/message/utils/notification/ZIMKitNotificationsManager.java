@@ -91,6 +91,7 @@ public class ZIMKitNotificationsManager {
             }
 
             String senderName = conversation.getName();
+
             String messageContent = messages.get(0).textContent.content;
 
             NotificationCompat.Builder builder = new NotificationCompat.Builder(ZIMKitCore.getInstance().getApplication(), "chat_channel")

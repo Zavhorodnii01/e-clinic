@@ -51,10 +51,12 @@ import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Appointment
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.MedicalRecord
 import com.example.e_clinic.Firebase.Repositories.AppointmentRepository
 import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.DoctorProfileScreen
+
 import com.google.firebase.Timestamp
 import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallService
 import com.zegocloud.uikit.prebuilt.call.invite.ZegoUIKitPrebuiltCallInvitationConfig
 import com.zegocloud.uikit.prebuilt.call.invite.internal.ZegoTranslationText
+import com.zegocloud.zimkit.services.ZIMKit
 
 
 class DoctorActivity : ComponentActivity() {
@@ -128,7 +130,7 @@ private fun createCallConfig(): ZegoUIKitPrebuiltCallInvitationConfig {
 fun MainScreen() {
     val navController = rememberNavController()
     val context = LocalContext.current
-    var doctorName by remember { mutableStateOf("Loading...") }
+    var doctorName by remember { mutableStateOf("") }
     val doctor = Doctor()
     val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
     var profilePictureUrl by remember { mutableStateOf<String?>(null) }
@@ -170,6 +172,8 @@ fun MainScreen() {
                 .addOnSuccessListener { documents ->
                     val doctorDoc = documents.documents.firstOrNull()
                     doctorName = doctorDoc?.getString("name") ?: "Unknown Doctor"
+                    val doctorSurname = doctorDoc?.getString("surname") ?: ""
+                    doctorName = doctorName + " " + doctorSurname
                     doctorState.value = doctorDoc?.id
                     profilePictureUrl = doctorDoc?.getString("profilePicture")
                 }
@@ -185,10 +189,12 @@ fun MainScreen() {
         application,
         BuildConfig.APP_ID.toLong(),
         BuildConfig.APP_SIGN,
-        userID,  // Actual user ID
+        userId,  // Actual user ID
         doctorName, // Actual user name
         createCallConfig() // Same config as before
     )
+
+    ZIMKit.connectUser(userId, doctorName, ""){}
 
     fun finishAppointment(appointment: Appointment) {
         val currentTime = Timestamp.now()
