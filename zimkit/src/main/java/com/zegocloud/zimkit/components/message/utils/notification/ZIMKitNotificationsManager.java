@@ -1,6 +1,8 @@
 package com.zegocloud.zimkit.components.message.utils.notification;
 
 import android.text.TextUtils;
+import android.util.Log;
+
 import com.zegocloud.uikit.plugin.signaling.ZegoSignalingPlugin;
 import com.zegocloud.zimkit.R;
 import com.zegocloud.zimkit.common.utils.ZIMKitActivityUtils;
@@ -59,6 +61,7 @@ public class ZIMKitNotificationsManager {
         @Override
         public void onMessageReceived(String conversationID, ZIMConversationType type,
             ArrayList<ZIMKitMessage> messages) {
+
             ZIMKitConversation conversation = ZIMKitCore.getInstance().getZIMKitConversation(conversationID);
             if (conversation != null) {
                 ZIMConversation zimConversation = conversation.getZimConversation();
@@ -117,6 +120,7 @@ public class ZIMKitNotificationsManager {
                                             operatorName = zimMessage.getSenderUserID();
                                         } else {
                                             operatorName = memoryUserInfo.baseInfo.userName;
+                                            Log.d("operatorName", operatorName);
                                         }
                                         noticeContent(zimMessage, operatorName + " ");
                                     }
