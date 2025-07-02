@@ -75,6 +75,8 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallService
 import com.zegocloud.uikit.prebuilt.call.invite.ZegoUIKitPrebuiltCallInvitationConfig
 import com.zegocloud.uikit.prebuilt.call.invite.internal.ZegoTranslationText
+import kotlinx.coroutines.flow.MutableStateFlow
+
 import com.zegocloud.zimkit.services.ZIMKit
 
 //import com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.ServiceListItem
@@ -163,20 +165,25 @@ fun MainScreen() {
     val user = FirebaseAuth.getInstance().currentUser
 
 
-    LaunchedEffect(user) {
-        user?.let {
-            val userId = it.uid
-            userID = userId
-            val db = FirebaseFirestore.getInstance()
-            db.collection("users").document(userId)
-                .addSnapshotListener { document, _ ->
-                    if (document != null && document.exists()) {
-                        userName = document.getString("name") ?: "Unknown User"
-                        userSurname = document.getString("surname") ?: ""
-                        userName = userName + " " + userSurname
-                        profilePictureUrl = document.getString("profilePicture")
-                    }
-                }
+    val profilePictureFlow = remember { MutableStateFlow<String?>(null) }
+
+    user?.let {
+        val userId = it.uid
+        userID = userId
+        val db = FirebaseFirestore.getInstance()
+        db.collection("users").document(userId).addSnapshotListener { snapshot, _ ->
+            if (snapshot != null && snapshot.exists()) {
+                profilePictureFlow.value = snapshot.getString("profilePicture")
+                userName = snapshot.getString("name") ?: "Unknown User"
+            } else {
+                userName = "Unknown User"
+            }
+        }
+    }
+
+    LaunchedEffect(profilePictureFlow) {
+        profilePictureFlow.collect { newProfilePicture ->
+            profilePictureUrl = newProfilePicture
         }
     }
 
@@ -235,7 +242,7 @@ fun MainScreen() {
         createCallConfig() // Same config as before
     )
 
-    ZIMKit.connectUser(userID, userName,profilePictureUrl){}
+    ZIMKit.connectUser(userID, userName, ""){}
 }
 
 

@@ -1,9 +1,10 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3Api::class)
 
 package com.example.e_clinic.UI.activities.admin_screens.admin_activity
 
 
 import android.app.DatePickerDialog
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -34,7 +35,9 @@ import androidx.compose.ui.unit.dp
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.specializations.DoctorSpecialization
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Locale
 import java.util.UUID
 import kotlin.text.set
 
@@ -202,6 +205,19 @@ fun NewDoctorScreen(onDoctorAdded: () -> Unit = {}) {
         Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = {
+                if (!isValidDob(dob)) {
+                     Toast.makeText(context, "Invalid date of birth. Must be at least 21 years old.", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+                if (!isValidPhoneNumber(phone)) {
+                    Toast.makeText(context, "Invalid phone number. Must be 9 digits.", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+                if (!isValidEmail(email)) {
+                    Toast.makeText(context, "Invalid email address.", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+
                 val password = UUID.randomUUID().toString().substring(0, 8) // Simple random password
                 val auth = FirebaseAuth.getInstance()
                 val timestamp = try{
@@ -247,4 +263,21 @@ fun NewDoctorScreen(onDoctorAdded: () -> Unit = {}) {
             Text("Add Doctor")
         }
     }
+}
+
+
+private fun isValidDob(dob: String): Boolean {
+    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    val birthDate = sdf.parse(dob) ?: return false
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.YEAR, -21)
+    return !birthDate.after(calendar.time)
+}
+
+private fun isValidPhoneNumber(phone: String): Boolean {
+    return phone.matches(Regex("^\\d{9}$"))
+}
+
+private fun isValidEmail(email: String): Boolean {
+    return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
 }

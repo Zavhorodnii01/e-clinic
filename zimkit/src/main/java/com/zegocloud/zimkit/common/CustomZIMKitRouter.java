@@ -16,7 +16,7 @@ import com.zegocloud.zimkit.common.enums.ZIMKitConversationType;
 public class CustomZIMKitRouter extends ZIMKitRouter {
 
     private static final long APP_ID = 2013180826L;
-    private static final String APP_SIGN = "7f25f426b54a6fb21587414c4ac9174adb144d9d43353c41df876afcb43062df";
+    private static final String APP_SIGN = "ffc7aa3de9a04b6342e35a315ae28fbc974546c05c48ab22085cc79364484eb8";
 
     /**
      * Enhanced version with call initialization

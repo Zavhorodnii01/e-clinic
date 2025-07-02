@@ -71,8 +71,8 @@ fun PasswordUpdateScreen() {
                     error = "Passwords do not match"
                     return@Button
                 }
-                if (newPassword.length < 6) {
-                    error = "Password must be at least 6 characters"
+                if (!isValidPassword(newPassword)) {
+                    error = "Password must be at least 8 characters long, contain one uppercase letter, one numeral, and one special character!"
                     return@Button
                 }
                 loading = true
@@ -143,4 +143,9 @@ fun PasswordUpdateDialog(onDismiss: () -> Unit) {
             PasswordUpdateScreen()
         }
     }
+}
+
+private fun isValidPassword(password: String): Boolean {
+    val passwordRegex = Regex("^(?=.*[A-Z])(?=.*[0-9])(?=.*[@#\$%^&+=!]).{8,}$")
+    return password.matches(passwordRegex)
 }

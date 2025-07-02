@@ -21,6 +21,7 @@ import com.example.e_clinic.UI.theme.EClinicTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
 import java.util.*
 
 class UpdateUserDataActivity : ComponentActivity() {
@@ -189,6 +190,19 @@ fun UpdateUserDataScreen(onFinish: () -> Unit) {
             Spacer(Modifier.height(16.dp))
             Button(
                 onClick = {
+                    if (!isValidDob(dob)) {
+                        error = "You must be at least 18 years old."
+                        return@Button
+                    }
+                    if (!isValidPhoneNumber(phone)) {
+                        error = "Invalid phone number. Must be 9 digits."
+                        return@Button
+                    }
+                    if (!isValidEmail(email)) {
+                        error = "Invalid email format."
+                        return@Button
+                    }
+
                     val timestamp = try {
                         val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                         val date = sdf.parse(dob)
@@ -220,3 +234,20 @@ fun UpdateUserDataScreen(onFinish: () -> Unit) {
         }
     }
 }
+
+private fun isValidDob(dob: String): Boolean {
+    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    val birthDate = sdf.parse(dob) ?: return false
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.YEAR, -18)
+    return !birthDate.after(calendar.time)
+}
+
+private fun isValidPhoneNumber(phone: String): Boolean {
+    return phone.matches(Regex("^\\d{9}$"))
+}
+
+private fun isValidEmail(email: String): Boolean {
+    return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+}
+

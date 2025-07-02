@@ -194,7 +194,8 @@ fun MainScreen() {
         createCallConfig() // Same config as before
     )
 
-    ZIMKit.connectUser(userId, doctorName, doctor.profilePicture){}
+    ZIMKit.connectUser(userId, doctorName, ""){}
+
 
     fun finishAppointment(appointment: Appointment) {
         val currentTime = Timestamp.now()

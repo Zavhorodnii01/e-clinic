@@ -20,7 +20,9 @@ import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Doctor
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.specializations.DoctorSpecialization
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Locale
 import kotlin.collections.get
 import kotlin.text.get
 import kotlin.toString
@@ -222,6 +224,20 @@ fun DataManagerScreen(id: String, type: String){
         Spacer(Modifier.height(16.dp))
         Button(onClick = {
             if (type == "user") {
+                if (!isValidDob(dob)) {
+                    error = "Invalid date of birth. You must be at least 18 years old."
+                    return@Button
+                }
+                if (!isValidPhoneNumber(phone)) {
+                    error = "Invalid phone number format. It should be 9 digits long."
+                    return@Button
+                }
+                if (!isValidEmail(email)) {
+                    error = "Invalid email format."
+                    return@Button
+                }
+
+
                 val timestamp = try {
                     val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
                     val date = sdf.parse(dob)
@@ -241,6 +257,18 @@ fun DataManagerScreen(id: String, type: String){
                     .addOnFailureListener { error = it.message }
             }
             else if (type == "doctor") {
+                if (!isValidDobDoc(dob)) {
+                    error = "Invalid date of birth. You must be at least 21 years old."
+                    return@Button
+                }
+                if (!isValidPhoneNumber(phone)) {
+                    error = "Invalid phone number format. It should be 9 digits long."
+                    return@Button
+                }
+                if (!isValidEmail(email)) {
+                    error = "Invalid email format."
+                    return@Button
+                }
                 val timestamp = try {
                     val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
                     val date = sdf.parse(dob)
@@ -271,4 +299,27 @@ fun DataManagerScreen(id: String, type: String){
     }
 
 
+}
+private fun isValidDob(dob: String): Boolean {
+    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    val birthDate = sdf.parse(dob) ?: return false
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.YEAR, -18)
+    return !birthDate.after(calendar.time)
+}
+
+private fun isValidDobDoc(dob: String): Boolean {
+    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    val birthDate = sdf.parse(dob) ?: return false
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.YEAR, -21)
+    return !birthDate.after(calendar.time)
+}
+
+private fun isValidPhoneNumber(phone: String): Boolean {
+    return phone.matches(Regex("^\\d{9}$"))
+}
+
+private fun isValidEmail(email: String): Boolean {
+    return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
 }

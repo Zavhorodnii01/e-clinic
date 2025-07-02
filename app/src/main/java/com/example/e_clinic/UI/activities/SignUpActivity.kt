@@ -82,6 +82,8 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
         calendar.get(Calendar.MONTH),
         calendar.get(Calendar.DAY_OF_MONTH)
     )
+    datePickerDialog.datePicker.maxDate = System.currentTimeMillis()
+
 
     val googleSignUpLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -157,6 +159,23 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
             errorMessage = "Passwords do not match!"
             return
         }
+        if (!isValidEmail(email)) {
+            errorMessage = "Invalid email format!"
+            return
+        }
+        if (!isValidPhoneNumber(phone)) {
+            errorMessage = "Phone number must have exactly 9 digits!"
+            return
+        }
+        if (!isValidDob(dob)) {
+            errorMessage = "You must be at least 18 years old!"
+            return
+        }
+        if (!isValidPassword(password)) {
+            errorMessage = "Password must be at least 8 characters long, contain one uppercase letter, one numeral, and one special character!"
+            return
+        }
+
 
         auth.createUserWithEmailAndPassword(email.trim(), password.trim())
             .addOnCompleteListener { task ->
@@ -379,7 +398,7 @@ fun RegistrationScreen(onSignUpSuccess: () -> Unit = {}, preFilledEmail: String?
     }
 }
 
-fun parseDobToTimestamp(dob: String): Timestamp? {
+private fun parseDobToTimestamp(dob: String): Timestamp? {
     return try {
         val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         val date = sdf.parse(dob)
@@ -387,4 +406,25 @@ fun parseDobToTimestamp(dob: String): Timestamp? {
     } catch (e: Exception) {
         null
     }
+}
+
+private fun isValidPassword(password: String): Boolean {
+    val passwordRegex = Regex("^(?=.*[A-Z])(?=.*[0-9])(?=.*[@#\$%^&+=!]).{8,}$")
+    return password.matches(passwordRegex)
+}
+
+private fun isValidDob(dob: String): Boolean {
+    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    val birthDate = sdf.parse(dob) ?: return false
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.YEAR, -18)
+    return !birthDate.after(calendar.time)
+}
+
+private fun isValidPhoneNumber(phone: String): Boolean {
+    return phone.matches(Regex("^\\d{9}$"))
+}
+
+private fun isValidEmail(email: String): Boolean {
+    return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
 }

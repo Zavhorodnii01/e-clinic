@@ -82,12 +82,17 @@ fun PrescribeScreenForm(doctorId: String, medicalRecordId: String) {
             }
     }
 
-    Column(modifier = Modifier.padding(16.dp)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(16.dp)
+    )  {
         Column(
             modifier = Modifier
-                .weight(1f)
                 .verticalScroll(scrollState)
-                .padding(16.dp)
+                .fillMaxSize()
+
         ) {
             // Medical record selection button
             Button(

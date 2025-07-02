@@ -91,6 +91,10 @@ fun AdminDataUpdateScreen(id: String) {
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = {
+                if (!isValidPhoneNumber(phone)) {
+                    error = "Invalid phone number format. It should be 9 digits long."
+                    return@Button
+                }
                 val updateMap = mapOf(
                     "name" to name,
                     "surname" to surname,
@@ -121,4 +125,8 @@ fun AdminDataUpdateScreen(id: String) {
             }
         )
     }
+}
+
+private fun isValidPhoneNumber(phone: String): Boolean {
+    return phone.matches(Regex("^\\d{9}$"))
 }
