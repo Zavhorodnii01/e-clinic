@@ -95,6 +95,7 @@ fun AdminDataUpdateScreen(id: String) {
                     error = "Invalid phone number format. It should be 9 digits long."
                     return@Button
                 }
+                else{
                 val updateMap = mapOf(
                     "name" to name,
                     "surname" to surname,
@@ -103,7 +104,7 @@ fun AdminDataUpdateScreen(id: String) {
                 firestore.collection("administrators").document(id).update(updateMap)
                     .addOnSuccessListener { success = true }
                     .addOnFailureListener { e -> error = e.message }
-            },
+            }},
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Save Changes")

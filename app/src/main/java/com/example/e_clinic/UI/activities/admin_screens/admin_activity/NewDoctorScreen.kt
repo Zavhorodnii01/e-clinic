@@ -218,6 +218,7 @@ fun NewDoctorScreen(onDoctorAdded: () -> Unit = {}) {
                     return@Button
                 }
 
+                else{
                 val password = UUID.randomUUID().toString().substring(0, 8) // Simple random password
                 val auth = FirebaseAuth.getInstance()
                 val timestamp = try{
@@ -257,6 +258,7 @@ fun NewDoctorScreen(onDoctorAdded: () -> Unit = {}) {
                         // Handle error
                         it.printStackTrace()
                     }
+                }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -267,7 +269,7 @@ fun NewDoctorScreen(onDoctorAdded: () -> Unit = {}) {
 
 
 private fun isValidDob(dob: String): Boolean {
-    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     val birthDate = sdf.parse(dob) ?: return false
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.YEAR, -21)

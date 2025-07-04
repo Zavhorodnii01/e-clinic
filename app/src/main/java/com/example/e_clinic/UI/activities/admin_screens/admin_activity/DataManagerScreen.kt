@@ -236,6 +236,7 @@ fun DataManagerScreen(id: String, type: String){
                     error = "Invalid email format."
                     return@Button
                 }
+                else{
 
 
                 val timestamp = try {
@@ -255,7 +256,7 @@ fun DataManagerScreen(id: String, type: String){
                 firestore.collection("users").document(id).update(updateMap)
                     .addOnSuccessListener { success = true }
                     .addOnFailureListener { error = it.message }
-            }
+            }}
             else if (type == "doctor") {
                 if (!isValidDobDoc(dob)) {
                     error = "Invalid date of birth. You must be at least 21 years old."
@@ -269,6 +270,7 @@ fun DataManagerScreen(id: String, type: String){
                     error = "Invalid email format."
                     return@Button
                 }
+                else{
                 val timestamp = try {
                     val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
                     val date = sdf.parse(dob)
@@ -289,7 +291,7 @@ fun DataManagerScreen(id: String, type: String){
                 firestore.collection("doctors").document(id).update(updateMap)
                     .addOnSuccessListener { success = true }
                     .addOnFailureListener { error = it.message }
-            }
+            }}
         }) {
             Text("Save Changes")
         }
@@ -301,7 +303,7 @@ fun DataManagerScreen(id: String, type: String){
 
 }
 private fun isValidDob(dob: String): Boolean {
-    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     val birthDate = sdf.parse(dob) ?: return false
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.YEAR, -18)
@@ -309,7 +311,7 @@ private fun isValidDob(dob: String): Boolean {
 }
 
 private fun isValidDobDoc(dob: String): Boolean {
-    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     val birthDate = sdf.parse(dob) ?: return false
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.YEAR, -21)

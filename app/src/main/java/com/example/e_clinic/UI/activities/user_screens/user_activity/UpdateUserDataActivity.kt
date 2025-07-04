@@ -202,6 +202,7 @@ fun UpdateUserDataScreen(onFinish: () -> Unit) {
                         error = "Invalid email format."
                         return@Button
                     }
+                    else{
 
                     val timestamp = try {
                         val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -223,7 +224,8 @@ fun UpdateUserDataScreen(onFinish: () -> Unit) {
                             onFinish()
                         }
                         .addOnFailureListener { error = it.message }
-                },
+                }
+                          },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Save Changes")
@@ -236,7 +238,7 @@ fun UpdateUserDataScreen(onFinish: () -> Unit) {
 }
 
 private fun isValidDob(dob: String): Boolean {
-    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     val birthDate = sdf.parse(dob) ?: return false
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.YEAR, -18)
