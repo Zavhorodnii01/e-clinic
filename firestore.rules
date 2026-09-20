@@ -1,68 +1,11 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    function isSignedIn() { return request.auth != null; }
-    function isAdmin() {
-      return isSignedIn() &&
-        exists(/databases/$(database)/documents/administrators/$(request.auth.uid));
-    }
-    function isDoctor() {
-      return isSignedIn() &&
-        exists(/databases/$(database)/documents/doctors/$(request.auth.uid));
-    }
-
-    match /users/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin() || isDoctor());
-      allow write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-    }
-
-    match /doctors/{doctorId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin() || (isSignedIn() && request.auth.uid == doctorId);
-    }
-
-    match /administrators/{adminId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-
-    match /appointments/{appointmentId} {
-      allow read: if isSignedIn() && (
-        resource.data.user_id == request.auth.uid ||
-        resource.data.doctor_id == request.auth.uid ||
-        isAdmin());
-      allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid;
-      allow update: if isSignedIn() && (
-        resource.data.user_id == request.auth.uid ||
-        resource.data.doctor_id == request.auth.uid ||
-        isAdmin());
-      allow delete: if isAdmin();
-    }
-
-    match /medical_records/{recordId} {
-      allow read: if isSignedIn() && (
-        resource.data.user_id == request.auth.uid ||
-        resource.data.doctor_id == request.auth.uid ||
-        isAdmin());
-      allow write: if isDoctor() || isAdmin();
-    }
-
-    match /prescriptions/{prescriptionId} {
-      allow read: if isSignedIn() && (
-        resource.data.user_id == request.auth.uid ||
-        resource.data.doctor_id == request.auth.uid ||
-        isAdmin());
-      allow create, update: if isDoctor() || isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    match /timeslots/{timeslotId} {
-      allow read: if isSignedIn();
-      allow create, delete: if isAdmin() || (isDoctor() && request.resource.data.doctor_id == request.auth.uid);
-      allow update: if isAdmin()
-        || (isDoctor() && resource.data.doctor_id == request.auth.uid)
-        || (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["available_slots"]));
+    // Allow full read and write access to all documents in all collections
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }
+

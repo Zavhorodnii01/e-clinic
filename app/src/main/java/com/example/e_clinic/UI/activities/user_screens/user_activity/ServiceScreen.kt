@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.example.e_clinic.ZEGOCloud.launchZegoChat
 import com.example.e_clinic.Services.Service
 import com.example.e_clinic.Services.functions.appServices
 import com.google.firebase.auth.FirebaseAuth
@@ -63,7 +64,7 @@ fun ServicesScreen(navController: NavHostController) {
                             .clickable {
                                 when (service.name) {
                                     "My Appointments" -> navController.navigate("appointment_screen/$userId")
-                                    "Chat with Doctor" -> navController.navigate("chat")
+                                    "Chat with Doctor" -> launchZegoChat(context)
                                     "Chat with AI Assistant" -> navController.navigate("ai_chat")
                                     "My Prescriptions" -> navController.navigate("documents")
                                 }
