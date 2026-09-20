@@ -21,7 +21,6 @@ import androidx.core.app.ActivityCompat
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import com.example.e_clinic.Firebase.FirestoreDatabase.collections.Doctor
-import com.example.e_clinic.ZEGOCloud.launchZegoChat
 import com.example.e_clinic.Services.Service
 import com.example.e_clinic.UI.theme.EClinicTheme
 import com.google.firebase.auth.FirebaseAuth
@@ -53,10 +52,7 @@ import com.example.e_clinic.Firebase.Repositories.AppointmentRepository
 import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.DoctorProfileScreen
 
 import com.google.firebase.Timestamp
-import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallService
-import com.zegocloud.uikit.prebuilt.call.invite.ZegoUIKitPrebuiltCallInvitationConfig
-import com.zegocloud.uikit.prebuilt.call.invite.internal.ZegoTranslationText
-import com.zegocloud.zimkit.services.ZIMKit
+import com.example.e_clinic.UI.activities.user_screens.user_activity.ChatPlaceholderScreen
 
 
 class DoctorActivity : ComponentActivity() {
@@ -112,17 +108,6 @@ class DoctorActivity : ComponentActivity() {
         }
     }
 }
-
-private fun createCallConfig(): ZegoUIKitPrebuiltCallInvitationConfig {
-    return ZegoUIKitPrebuiltCallInvitationConfig().apply {
-        //notifyWhenAppRunningInBackgroundOrQuit = true
-        translationText = ZegoTranslationText().apply {
-            //callInvitationDialogTitle = "Incoming Call"
-            //callInvitationDialogMessage = "is calling you"
-            incomingCallPageAcceptButton = "Accept"
-            incomingCallPageDeclineButton = "Decline"
-        }
-    }}
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -183,18 +168,6 @@ fun MainScreen() {
         }
     }
 
-    val application = context.applicationContext as Application
-
-    ZegoUIKitPrebuiltCallService.init(
-        application,
-        BuildConfig.APP_ID.toLong(),
-        BuildConfig.APP_SIGN,
-        userId,  // Actual user ID
-        doctorName, // Actual user name
-        createCallConfig() // Same config as before
-    )
-
-    ZIMKit.connectUser(userId, doctorName, doctor.profilePicture){}
 
     fun finishAppointment(appointment: Appointment) {
         val currentTime = Timestamp.now()
@@ -416,6 +389,7 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier, doctor:
         composable("services") { ServicesScreen(navController) }
         composable("prescriptions") { PrescribeScreen() }
         composable("profile") { DoctorProfileScreen() }
+        composable("chat") { ChatPlaceholderScreen() }
 
         composable("prescribe/{fromCalendar}/{patientId}") { backStackEntry ->
             val fromCalendar = backStackEntry.arguments?.getString("fromCalendar")?.toBoolean() ?: false
@@ -469,8 +443,12 @@ fun BottomNavigationBar(navController: NavHostController) {
             NavigationBarItem(
                 icon = { Icon(Icons.Default.Forum, null) },
                 label = { Text("Chat") },
-                selected = false,
-                onClick = { launchZegoChat(context) },
+                selected = currentDestination == "chat",
+                onClick = {
+                    if (currentDestination != "chat") {
+                        navController.navigate("chat")
+                    }
+                },
                 alwaysShowLabel = true
             )
         }

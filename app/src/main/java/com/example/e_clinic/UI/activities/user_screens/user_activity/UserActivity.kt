@@ -9,17 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,16 +18,7 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -64,18 +45,12 @@ import com.example.e_clinic.UI.theme.EClinicTheme
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.example.e_clinic.BuildConfig
-import com.example.e_clinic.ZEGOCloud.launchZegoChat
-//import com.example.e_clinic.UI.activities.doctor_screens.doctor_activity.ServiceListItem
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
 import com.google.firebase.messaging.FirebaseMessaging
-import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallService
-import com.zegocloud.uikit.prebuilt.call.invite.ZegoUIKitPrebuiltCallInvitationConfig
-import com.zegocloud.uikit.prebuilt.call.invite.internal.ZegoTranslationText
-import com.zegocloud.zimkit.services.ZIMKit
 
 //import com.example.e_clinic.ui.activities.doctor_screens.doctor_activity.ServiceListItem
 
@@ -139,16 +114,57 @@ class UserActivity : ComponentActivity() {
 }
 
 
-private fun createCallConfig(): ZegoUIKitPrebuiltCallInvitationConfig {
-    return ZegoUIKitPrebuiltCallInvitationConfig().apply {
-        //notifyWhenAppRunningInBackgroundOrQuit = true
-        translationText = ZegoTranslationText().apply {
-            //callInvitationDialogTitle = "Incoming Call"
-            //callInvitationDialogMessage = "is calling you"
-            incomingCallPageAcceptButton = "Accept"
-            incomingCallPageDeclineButton = "Decline"
+@Composable
+fun ChatPlaceholderScreen(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Surface(
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                modifier = Modifier.size(96.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Forum,
+                        contentDescription = "Chat Disabled",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "Temporarily Disabled",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Chat and consultation features are currently undergoing maintenance and are temporarily unavailable. Please check back later.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                lineHeight = 22.sp,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
         }
-    }}
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -223,19 +239,6 @@ fun MainScreen() {
     ) { innerPadding ->
         NavigationHost(navController = navController, modifier = Modifier.padding(innerPadding))
     }
-
-    val application = context.applicationContext as Application
-
-    ZegoUIKitPrebuiltCallService.init(
-        application,
-        BuildConfig.APP_ID.toLong(),
-        BuildConfig.APP_SIGN,
-        userID,  // Actual user ID
-        userName, // Actual user name
-        createCallConfig() // Same config as before
-    )
-
-    ZIMKit.connectUser(userID, userName,profilePictureUrl){}
 }
 
 
@@ -251,8 +254,7 @@ fun NavigationHost(navController: NavHostController, modifier: Modifier = Modifi
             ServicesScreen(navController = navController)
         }
 
-        // Uncomment this if ChatScreen is implemented
-        // composable("chat") { ChatScreen() }
+        composable("chat") { ChatPlaceholderScreen() }
 
         composable("appointments") {
             val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
@@ -353,8 +355,12 @@ fun BottomNavigationBar(navController: NavHostController) {
             NavigationBarItem(
                 icon = { Icon(Icons.Default.Forum, null) },
                 label = { Text("Chat") },
-                selected = false,
-                onClick = { launchZegoChat(context) },
+                selected = currentDestination == "chat",
+                onClick = {
+                    if (currentDestination != "chat") {
+                        navController.navigate("chat")
+                    }
+                },
                 alwaysShowLabel = true
             )
         }

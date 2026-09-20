@@ -1,5 +1,6 @@
 package com.example.e_clinic.ZEGOCloud
 
+/*
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -74,3 +75,4 @@ class CallActivity : AppCompatActivity() {
             .commitNow()
     }
 }
+*/

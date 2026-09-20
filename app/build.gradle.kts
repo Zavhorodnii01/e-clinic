@@ -155,10 +155,8 @@ dependencies {
     implementation ("androidx.lifecycle:lifecycle-viewmodel-savedstate:2.6.2")
 
 
-    implementation ("com.github.ZEGOCLOUD:zego_uikit_prebuilt_call_android:+")
-
-
-    implementation(project(":zimkit"))
+    // implementation ("com.github.ZEGOCLOUD:zego_uikit_prebuilt_call_android:+")
+    // implementation(project(":zimkit"))
 
     //implementation("com.google.ai.client:generativeai:0.3.1") // проверь последнюю доступную версию
 

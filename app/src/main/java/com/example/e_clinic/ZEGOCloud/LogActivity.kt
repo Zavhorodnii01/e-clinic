@@ -1,5 +1,6 @@
 package com.example.e_clinic.ZEGOCloud
 
+/*
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
@@ -23,8 +24,6 @@ class LogActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_log2)
-
-
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -57,3 +56,4 @@ class LogActivity : AppCompatActivity() {
         finish() // Optional: closes the login screen
     }
 }
+*/

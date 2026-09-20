@@ -53,21 +53,21 @@
             android:exported="true"
             android:theme="@style/Theme.AppCompat.Light.DarkActionBar"/> -->
 
-        <activity
+        <!-- <activity
             android:name=".ZEGOCloud.ConversationActivity"
-            android:exported="true" />
+            android:exported="true" /> -->
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
 
         <activity android:name=".UI.activities.user_screens.user_activity.UpdateUserDataActivity" />
-        <activity
+        <!-- <activity
             android:name=".ZEGOCloud.MainActivity"
             android:exported="true" />
         <activity
             android:name=".ZEGOCloud.LogActivity"
-            android:exported="true" />
+            android:exported="true" /> -->
         <activity
             android:name="com.example.e_clinic.UI.activities.user_screens.ChangePinActivity"
             android:exported="true" />
