@@ -17,7 +17,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://storage.zego.im/maven") }
         maven {
             url = uri("https://www.jitpack.io")
         }
@@ -26,4 +25,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "e-clinic"
 include(":app")
-include(":zimkit")

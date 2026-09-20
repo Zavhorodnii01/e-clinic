@@ -14,3 +14,5 @@
 .cxx
 local.properties
 /.idea
+node_modules/
+functions/node_modules/
