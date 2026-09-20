@@ -31,6 +31,9 @@ import com.example.e_clinic.UI.activities.user_screens.user_activity.formatEnumS
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.zegocloud.zimkit.common.ZIMKitRouter
+import com.zegocloud.zimkit.common.enums.ZIMKitConversationType
+import com.zegocloud.zimkit.services.ZIMKit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -103,7 +106,112 @@ fun AppointmentsScreen(doctorId: String) {
 
     // Keep existing openChatWithPatient function as is
     fun openChatWithPatient(appt: Appointment) {
-        Toast.makeText(context, "Chat is temporarily disabled", Toast.LENGTH_SHORT).show()
+        // ... (Your existing openChatWithPatient function logic) ...
+        Log.d("ChatDebug", "Starting openChatWithPatient()")
+
+        // 1. Validate appointment
+        if (appt == null) {
+            Log.e("ChatDebug", "ERROR: Null appointment object")
+            Toast.makeText(context, "Invalid appointment data", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        // 2. Validate patient ID
+        val patientId = appt.user_id?.trim() ?: ""
+        if (patientId.isBlank()) {
+            Log.e("ChatDebug", "ERROR: Blank patient ID in appointment: ${appt.toString()}")
+            Toast.makeText(context, "Invalid patient ID", Toast.LENGTH_LONG).show()
+            return
+        }
+        Log.d("ChatDebug", "Patient ID validated: ${patientId.take(4)}...")
+
+        // 3. Check Firebase auth
+        val firebaseUser = FirebaseAuth.getInstance().currentUser
+        if (firebaseUser == null) {
+            Log.e("ChatDebug", "ERROR: No authenticated Firebase user")
+            Toast.makeText(context, "Please sign in first", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        // 4. Prepare user info with guaranteed non-empty name
+        val selfId = firebaseUser.uid
+        val selfName = firebaseUser.displayName?.takeIf { it.isNotBlank() }
+            ?: firebaseUser.email?.substringBefore("@")?.takeIf { it.isNotBlank() }
+            ?: "User_${selfId.takeLast(4)}"  // Final fallback
+
+        Log.d("ChatDebug", "User Details - ID: ${selfId.take(4)}... | Name: $selfName")
+
+        // 5. Verify ZIMKit initialization
+        try {
+            val localUser = ZIMKit.getLocalUser()
+            Log.d("ChatDebug", "ZIMKit LocalUser: ${localUser?.id?.take(4)}...")
+
+            val readyBlock = {
+                Log.d("ChatDebug", "Navigating to chat with patient: ${patientId.take(4)}...")
+                try {
+                    ZIMKitRouter.toMessageActivity(
+                        context,
+                        patientId,
+                        ZIMKitConversationType.ZIMKitConversationTypePeer
+                    )
+                } catch (e: Exception) {
+                    Log.e("ChatDebug", "Failed to start chat activity: ${e.message}")
+                    Toast.makeText(context, "Failed to open chat", Toast.LENGTH_LONG).show()
+                }
+            }
+
+            // 6. Connection logic with enhanced error handling
+            if (localUser != null && localUser.id == selfId) {
+                Log.d("ChatDebug", "Already connected to ZIMKit")
+                readyBlock()
+            } else {
+                Log.d("ChatDebug", "Initiating ZIMKit connection...")
+                // Ensure AppID and Signature are set correctly via ZIMKit.init in your Application class
+               /* if (BuildConfig.ZEGO_APP_ID.toLongOrNull() == null || BuildConfig.ZEGO_APP_SIGN.isBlank()) {
+                    Log.e("ChatDebug", "Zego AppID or Signature is invalid/missing in BuildConfig")
+                    Toast.makeText(context, "Chat service configuration error", Toast.LENGTH_LONG).show()
+                    return
+                }*/
+                ZIMKit.connectUser(selfId, selfName, "") { err ->
+                    when {
+                        err == null || err.code.value() == 0 -> {
+                            Log.d("ChatDebug", "ZIMKit connection successful")
+                            readyBlock()
+                        }
+                        err.code.value() == 6000011 -> { // PARAM_INVALID
+                            Log.e("ChatDebug", "Invalid parameters - Name: '$selfName' (code: ${err.code})")
+                            Toast.makeText(context,
+                                "Please set your display name in profile settings",
+                                Toast.LENGTH_LONG).show()
+                        }
+                        err.code.value() == 1000003 -> { // AUTH_FAILED
+                            Log.e("ChatDebug", "ZIMKit Authentication Failed (code: ${err.code}) - Check AppID/Signature")
+                            Toast.makeText(context,
+                                "Chat authentication failed. Contact support.",
+                                Toast.LENGTH_LONG).show()
+                        }
+                        err.code.value() == 1000004 -> { // TOKEN_EXPIRED
+                            Log.e("ChatDebug", "ZIMKit Token Expired (code: ${err.code}) - Needs token generation logic")
+                            // In a real app, you'd re-generate and reconnect here
+                            Toast.makeText(context,
+                                "Chat token expired. Please try again.",
+                                Toast.LENGTH_LONG).show()
+                        }
+                        else -> {
+                            Log.e("ChatDebug",
+                                "Connection failed (${err.code}): ${err.message}")
+
+                            Toast.makeText(context,
+                                "Chat service unavailable (${err.code})",
+                                Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("ChatDebug", "Critical error: ${e.javaClass.simpleName}\n${e.stackTraceToString()}")
+            Toast.makeText(context, "Chat system error occurred", Toast.LENGTH_LONG).show()
+        }
     }
 
     // Function to complete the appointment (renamed slightly for clarity)

@@ -1,6 +1,5 @@
 package com.example.e_clinic.ZEGOCloud
 
-/*
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
@@ -40,4 +39,3 @@ class MainActivity : AppCompatActivity() {
         ZIMKit.initNotifications()
     }
 }
-*/
